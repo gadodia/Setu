@@ -58,7 +58,7 @@ categorization as a headline feature.
 
 | Task | Model | Why |
 |---|---|---|
-| Raw PDF/CSV text → structured extraction, PII redaction | **Local (Ollama: Llama 3.1 8B / Qwen2.5)** | Account numbers, balances never leave the machine. Extraction is a bounded task a local model handles adequately. |
+| Raw PDF/CSV text → structured extraction, PII redaction | **Local (Ollama; default `qwen2.5:7b`)** | Account numbers, balances never leave the machine. Extraction is a bounded, structure-heavy task — chosen for strong JSON/structured-output adherence at 7B, not raw reasoning. Model is a `config.yaml` value (`model_router.extraction.model`), swappable to `llama3.1:8b` or a larger Qwen with zero code change. |
 | Account/holding classification (asset class, geography, policy type) | **Claude Sonnet** | Needs nuance + few-shot from learned corrections; cheap enough per statement. |
 | Reconciliation reasoning, risk/allocation analysis, Q&A, report writing | **Claude Opus 4.8** (or Sonnet for cost) | Highest-stakes reasoning; must be reliable. |
 | Forecasting (extension) | **Claude + tools** (market/news APIs) | Multi-step synthesis with sources. |

@@ -20,8 +20,19 @@ fx_rates:
   USD: 1.0
   INR: 0.01203        # ~ 1 INR = 0.01203 USD  (USDINR ~= 83.1)
 
-# Model routing per stage — stubbed now, wired in Week 2+.
+# Model routing per stage. `provider` picks local (Ollama) vs cloud (Claude);
+# `model` names the concrete model — both swappable here with zero code change.
 model_router:
-  extraction: local          # Ollama (PII-heavy) — not used in Week 1
-  classification: claude      # Claude Sonnet
-  reasoning: claude           # Claude Opus/Sonnet
+  extraction:                 # PII-heavy: statement text → structured holdings. Stays LOCAL.
+    provider: local
+    model: qwen2.5:7b         # strong JSON/structured-output adherence; ~4.7GB on Apple Silicon
+  classification:             # asset class / geography / policy type
+    provider: claude
+    model: claude-sonnet-5
+  reasoning:                  # tool-calling loop, analysis, Q&A
+    provider: claude
+    model: claude-sonnet-5
+
+# Local model (Ollama) connection.
+ollama:
+  host: http://localhost:11434

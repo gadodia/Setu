@@ -44,5 +44,6 @@ StudyGuide/
 └── glossary.md          ← running glossary of terms (grows weekly)
 ```
 
-Status: **Weeks 1 and 3 written** (Week 1 as the foundational sample; Week 3 covers ReAct + LangGraph +
-the SQLite checkpointer). Remaining weeks generated as we implement them.
+Status: **Weeks 1, 2, and 3 written** (Week 1 foundations; Week 2 covers tool/function calling — the
+determinism spine, agentic loop vs. structured output, and deterministic-code-vs-LLM; Week 3 covers
+ReAct + LangGraph + the SQLite checkpointer). Remaining weeks generated as we implement them.

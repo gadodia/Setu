@@ -32,10 +32,23 @@ class Thresholds(BaseModel):
     reconcile_tolerance: Decimal = Decimal("0.005")
 
 
+class ModelStage(BaseModel):
+    """One routed stage: which provider and which concrete model."""
+
+    provider: str = "claude"       # "local" (Ollama) or "claude"
+    model: str = "claude-sonnet-5"
+
+
 class ModelRouter(BaseModel):
-    extraction: str = "local"
-    classification: str = "claude"
-    reasoning: str = "claude"
+    extraction: ModelStage = Field(
+        default_factory=lambda: ModelStage(provider="local", model="qwen2.5:7b")
+    )
+    classification: ModelStage = Field(default_factory=ModelStage)
+    reasoning: ModelStage = Field(default_factory=ModelStage)
+
+
+class Ollama(BaseModel):
+    host: str = "http://localhost:11434"
 
 
 class Config(BaseModel):
@@ -44,6 +57,7 @@ class Config(BaseModel):
     thresholds: Thresholds = Field(default_factory=Thresholds)
     fx_rates: dict[str, Decimal] = Field(default_factory=dict)
     model_router: ModelRouter = Field(default_factory=ModelRouter)
+    ollama: Ollama = Field(default_factory=Ollama)
 
     # Secrets loaded from .env (never from config.yaml).
     anthropic_api_key: str | None = None
