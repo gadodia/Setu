@@ -1,0 +1,37 @@
+[project]
+name = "setu"
+version = "0.1.0"
+description = "Setu — a cross-border (US + India) wealth & portfolio agent that consolidates assets across currencies and statement formats into one net-worth, allocation, and risk-vs-target view."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "gadodia" }]
+
+# Week 1 = deterministic substrate only (schema + synthetic data + calc + CLI).
+# LLM / LangGraph / vector store / parsers arrive in later weeks — kept out to keep the
+# first install lean and the substrate provably LLM-free.
+dependencies = [
+    "sqlalchemy>=2.0",
+    "pydantic>=2.7",
+    "typer>=0.12",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+setu = "setu.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["setu"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

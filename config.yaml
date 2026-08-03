@@ -1,0 +1,27 @@
+# Setu configuration. Deterministic settings only in Week 1;
+# model_router keys are stubbed for later weeks.
+
+base_currency: USD          # net worth is normalized into this currency
+
+paths:
+  data_dir: data
+  synthetic_dir: data/synthetic
+  inbox_dir: data/inbox
+  db_path: data/setu.db
+
+thresholds:
+  # Reconciliation: summed holdings may differ from a statement's stated total
+  # by at most this fraction before the ToT reconciliation loop is triggered (Week 4).
+  reconcile_tolerance: 0.005   # 0.5%
+
+# FX rates anchored to the base currency (1 unit of KEY = value in base currency).
+# Static table for the MVP; replaced by a live `fx` tool later. USD base → USD = 1.0.
+fx_rates:
+  USD: 1.0
+  INR: 0.01203        # ~ 1 INR = 0.01203 USD  (USDINR ~= 83.1)
+
+# Model routing per stage — stubbed now, wired in Week 2+.
+model_router:
+  extraction: local          # Ollama (PII-heavy) — not used in Week 1
+  classification: claude      # Claude Sonnet
+  reasoning: claude           # Claude Opus/Sonnet
