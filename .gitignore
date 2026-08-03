@@ -1,0 +1,30 @@
+# --- Secrets & local config ---
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Setu runtime data (never commit real financial data or the DB) ---
+data/setu.db
+data/setu.db-*
+data/inbox/
+data/checkpoints.db
+data/checkpoints.db-*
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.DS_Store
