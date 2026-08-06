@@ -27,12 +27,12 @@ Reads their results, re-plans on failure, runs independent statements **in paral
 | **Node** | `(state) → partial update`; wraps agent/tool | `nodes.py` |
 | **Edge** | next step; **normal** or **conditional** | `build.py` |
 
-**`build.py`** (assemble once, invoke per command): register nodes → wire edges → **compile with checkpointer + `interrupt_before`**.
-The **conditional edge after `reconcile`** (`ok→persist / mismatch→ask_user / retry→reconcile`) = the **self-correcting branch** (ToT decision as control flow).
+**`build.py`** (assemble once, invoke per command): register nodes → wire edges → **compile with a `SqliteSaver` checkpointer**.
+The **conditional edge after `reconcile`** (`ok→persist / mismatch→ask_user / retry→replan→reconcile`) = the **self-correcting branch** (ToT decision as control flow). `retry` goes through a `replan` node that bumps a bounded counter so a persistent mismatch escalates to the human instead of looping forever.
 
 ## SQLite checkpointer — snapshots State after every node, keyed by `thread_id`
 1. **Durability/resumability** — crash mid-ingest → same `thread_id` resumes from last checkpoint; done work not redone.
-2. **Human-in-the-loop** — `interrupt_before=["ask_user"]` **pauses + persists**; `invoke` returns frozen; later `invoke(Command(resume=…))` continues, State intact. **Without it, a paused run loses working memory.**
+2. **Human-in-the-loop** — the `ask_user` node calls **`interrupt({question,…})`** → **pauses + persists**; `invoke` returns frozen with the question under `__interrupt__`; later `invoke(Command(resume="accept"))` continues, State intact — even from a **new process** on the same checkpoint file. **Without it, a paused run loses working memory.** (Dynamic `interrupt()` vs static `interrupt_before` — use one, not both.)
 3. **Conversation continuity** — reuse `thread_id` across `setu ask` → follow-ups keep context = **short-term memory**, free.
 4. **Audit/time-travel** — per-step State history → provenance guardrail (Wk6).
 
@@ -57,4 +57,4 @@ statement, already **durable + resumable** before ToT (Wk4) / RAG (Wk5).
 ## Key terms
 Chain-of-Thought · ReAct · Tree-of-Thought · Thought/Action/Observation · grounding · re-planning ·
 orchestrator · sub-agent · multi-agent coordination · StateGraph · node · conditional edge · State (TypedDict) ·
-checkpointer · `thread_id` · `interrupt_before` · `Command(resume=…)` · durability/resumability · time-travel
+checkpointer · `thread_id` · `interrupt()` / `interrupt_before` · `__interrupt__` · `Command(resume=…)` · durability/resumability · time-travel

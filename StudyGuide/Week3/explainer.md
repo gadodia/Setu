@@ -99,36 +99,46 @@ ReAct is the *pattern*; **LangGraph** is *how Setu runs it reliably*. It models 
 ### What `build.py` does (assemble once, invoke per command)
 
 ```python
-# illustrative — graph/build.py
+# graph/build.py (condensed to match the shipped code)
+import sqlite3
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 
-def build_graph():
-    g = StateGraph(SetuState)                     # 1. State schema (state.py)
+def build_graph(...):
+    g = StateGraph(SetuState)                      # 1. State schema (state.py)
 
-    g.add_node("ingest",    ingestion_node)        # 2. nodes wrap agents/tools
-    g.add_node("reconcile", reconciliation_node)
-    g.add_node("persist",   persist_node)
-    g.add_node("ask_user",  human_node)
+    g.add_node("ingest",    nodes.ingest)          # 2. nodes wrap agents/tools
+    g.add_node("reconcile", nodes.reconcile)
+    g.add_node("replan",    _bump_retries)         #    bounds the self-correction loop
+    g.add_node("ask_user",  nodes.ask_user)        #    calls interrupt() internally
+    g.add_node("persist",   nodes.persist)
 
     g.add_edge(START, "ingest")                    # 3. wire edges
     g.add_edge("ingest", "reconcile")
     g.add_conditional_edges(                        #    ← ToT branch AS control flow
         "reconcile", route_after_reconcile,
-        {"ok": "persist", "mismatch": "ask_user", "retry": "reconcile"},
+        {"ok": "persist", "mismatch": "ask_user", "retry": "replan"},
     )
+    g.add_edge("replan", "reconcile")               #    bounded loop back
     g.add_edge("ask_user", "persist")
     g.add_edge("persist", END)
 
-    return g.compile(                               # 4. compile with durability + HITL
-        checkpointer=SqliteSaver.from_conn_string("data/setu.db"),
-        interrupt_before=["ask_user"],
-    )
+    # Checkpointer DB is SEPARATE from the ledger (data/checkpoints.db, not setu.db).
+    conn = sqlite3.connect("data/checkpoints.db", check_same_thread=False)
+    return g.compile(checkpointer=SqliteSaver(conn))   # 4. durability + HITL
 ```
 
-`route_after_reconcile` reads the reconciliation score in State and returns `"ok"` / `"mismatch"` /
-`"retry"` — the ToT reconciliation decision (Week 4) expressed as a graph edge. `cli.py` then does
-`graph.invoke({"goal": "ingest", ...}, config={"configurable": {"thread_id": "user-123"}})`.
+`route_after_reconcile` reads the reconciliation status in State and returns `"ok"` / `"mismatch"` /
+`"retry"` — the reconciliation decision expressed as a graph edge. `"retry"` routes through a
+`replan` node that increments a bounded counter (`MAX_RETRIES`) before looping back, so a persistent
+mismatch escalates to the human instead of spinning forever. `cli.py` then does
+`graph.invoke(new_state("ingest", path), config={"configurable": {"thread_id": "fidelity_brokerage"}})`.
+
+> **Static vs dynamic interrupt.** The shipped code drives HITL with a *dynamic* `interrupt()` call
+> *inside* the `ask_user` node rather than a static `interrupt_before=["ask_user"]` at compile time.
+> Both pause+persist the run, but the dynamic form lets the node **compute and attach the question
+> payload** (the reconciliation delta, the institution) which `invoke` returns under `__interrupt__`;
+> `invoke(Command(resume="accept"))` then continues. Using both at once double-pauses — pick one.
 
 ---
 
@@ -140,13 +150,15 @@ four things Setu specifically needs:
 1. **Durability / resumability.** A multi-statement ingest is long. Crash or Ctrl-C after 3 of 5
    statements → re-invoke with the same `thread_id` and it **resumes from the last checkpoint**; the
    finished statements aren't redone.
-2. **Human-in-the-loop (the big one).** `interrupt_before=["ask_user"]` **pauses and persists** the run
-   right before that node — `invoke` *returns* with the run frozen in `setu.db`. The UI shows the
-   question ("is this a ULIP or an endowment?"). Hours later the user answers and you call
-   `graph.invoke(Command(resume="ULIP"), config=…same thread_id…)` — it continues *exactly* where it
-   stopped, State intact. **Without the checkpointer a paused run would lose all working memory**, so
-   this is the feature that makes the reconciliation interrupt and (later) the ProfilingAgent
-   elicitation possible.
+2. **Human-in-the-loop (the big one).** The `ask_user` node calls `interrupt({question, …})`, which
+   **pauses and persists** the run — `invoke` *returns* with the run frozen in `checkpoints.db` and the
+   question payload under `__interrupt__`. The UI shows the question (in Setu today: "reconciliation
+   mismatch — accept the extraction anyway?"). Hours — or a process restart — later the user answers and
+   you call `graph.invoke(Command(resume="accept"), config=…same thread_id…)` — it continues *exactly*
+   where it stopped, State intact, **even from a brand-new process with a fresh connection to the same
+   checkpoint file** (verified: `setu ingest` pauses, `setu resume <thread> accept` finishes it).
+   **Without the checkpointer a paused run would lose all working memory**, so this is the feature that
+   makes the reconciliation interrupt and (later) the ProfilingAgent elicitation possible.
 3. **Conversation continuity.** For `setu ask`, reusing the `thread_id` means a follow-up ("what about
    just the India half?") retains prior context — that's **short-term memory** with zero extra code.
 4. **Audit / time-travel.** Every step is checkpointed, so the full history of State transitions is

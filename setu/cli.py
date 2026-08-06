@@ -100,16 +100,30 @@ def _alloc_table(title: str, buckets: dict, nw: calc.NetWorth, base: str):
     console.print()
 
 
-@app.command()
-def ingest(path: str = typer.Argument(..., help="Path to a PDF statement.")):
-    """Extract holdings from a PDF statement (Week 2: parse + local-model extraction).
+def _render_trace(trace: list) -> None:
+    """Print a run's Thought/Action/Observation trace (the visible ReAct loop)."""
+    style = {"thought": "cyan", "action": "magenta", "observation": "green", "ask_user": "yellow"}
+    console.print("\n[dim]── trace ──[/dim]")
+    for ev in trace:
+        kind = ev.get("kind", "?")
+        console.print(f"[{style.get(kind, 'white')}]{kind}[/] ({ev.get('node', '')}): {ev.get('content', '')}")
+    console.print("[dim]───────────[/dim]\n")
 
-    Runs the deterministic pdf_extract, then the LOCAL model to produce structured holdings.
-    Persistence + reconciliation against the stated total arrive in Week 4; for now this shows
-    what was extracted so the parse quality is inspectable.
+
+@app.command()
+def ingest(
+    path: str = typer.Argument(..., help="Path to a PDF statement."),
+    thread: str = typer.Option(None, "--thread", help="Thread id (checkpoint key). Defaults to the file name."),
+    trace: bool = typer.Option(True, "--trace/--no-trace", help="Show the Thought/Action/Observation trace."),
+):
+    """Ingest a statement through the LangGraph pipeline (Week 3).
+
+    Orchestrator → ingest (parse + local extraction) → reconcile (sum vs stated total) →
+    persist / ask_user. The run is checkpointed under `--thread`; on a reconciliation mismatch it
+    pauses for a human — answer with `setu resume <thread> <accept|reject>`.
     """
-    from setu.extraction import extract_from_pdf
-    from setu.llm.local import LocalClient, LocalModelError
+    from setu.agents.orchestrator import Orchestrator
+    from setu.llm.local import LocalClient
 
     config = load_config()
     p = Path(path)
@@ -126,27 +140,48 @@ def ingest(path: str = typer.Argument(..., help="Path to a PDF statement.")):
         )
         raise typer.Exit(code=1)
 
-    console.print(f"Extracting holdings from [bold]{p.name}[/bold] with {client.model}…")
-    try:
-        result = extract_from_pdf(str(p), client=client, config=config)
-    except LocalModelError as e:
-        console.print(f"[red]Extraction failed:[/red] {e}")
-        raise typer.Exit(code=1)
+    thread_id = thread or p.stem
+    console.print(f"Ingesting [bold]{p.name}[/bold] (thread [dim]{thread_id}[/dim]) with {client.model}…")
+    with Orchestrator(config) as orch:
+        outcome = orch.ingest(str(p), thread_id)
 
-    if not result.holdings:
-        console.print("[yellow]No holdings extracted.[/yellow]")
+    if trace:
+        _render_trace(outcome.trace)
+
+    if outcome.status == "interrupted":
+        console.print(f"[yellow]⏸ Paused for review:[/yellow] {outcome.question}")
+        console.print(f"Resume with: [bold]setu resume {thread_id} accept[/bold]  (or [bold]reject[/bold])")
         raise typer.Exit(code=0)
 
-    table = Table(title=f"Extracted holdings — {p.name}", title_style="bold cyan")
-    for col in ("Symbol", "Name", "Class", "Geo", "Quantity", "Market Value", "Ccy"):
-        table.add_column(col)
-    for h in result.holdings:
-        table.add_row(
-            h.symbol or "-", h.name, h.asset_class.value, h.geography.value,
-            str(h.quantity), str(h.market_value), h.currency,
+    if outcome.state.get("persisted_skipped"):
+        console.print("[yellow]Already ingested[/yellow] — skipped (idempotent).")
+    else:
+        console.print(
+            f"[green]✓ Ingested[/green] {outcome.persisted_holdings} holding(s); "
+            f"reconciliation: [bold]{outcome.reconcile_status}[/bold]."
         )
-    console.print(table)
-    console.print(f"[dim]{len(result.holdings)} holding(s). Persistence + reconciliation: Week 4.[/dim]")
+
+
+@app.command()
+def resume(
+    thread: str = typer.Argument(..., help="Thread id of the paused run."),
+    decision: str = typer.Argument(..., help="accept | reject"),
+    trace: bool = typer.Option(True, "--trace/--no-trace"),
+):
+    """Resume a run that paused at a human-in-the-loop reconciliation review."""
+    from setu.agents.orchestrator import Orchestrator
+
+    config = load_config()
+    with Orchestrator(config) as orch:
+        outcome = orch.resume(thread, decision.strip().lower())
+
+    if trace:
+        _render_trace(outcome.trace)
+
+    if outcome.state.get("persisted_holdings"):
+        console.print(f"[green]✓ Resumed[/green] — wrote {outcome.persisted_holdings} holding(s).")
+    else:
+        console.print("[yellow]Resumed — nothing persisted[/yellow] (rejected or already ingested).")
 
 
 @app.command()
