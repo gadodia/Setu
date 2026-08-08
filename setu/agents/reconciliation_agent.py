@@ -6,10 +6,12 @@ equal that **stated total** within tolerance?
 
 ToT in practice: statement text is messy, so there's no single reliable "the total is X" parse.
 We generate **several candidate totals** via independent hypotheses (the explicit "Total account
-value" line, the largest currency figure, the last table "Total" row, …), score each by closeness
-to the extracted sum, and keep the best-scoring candidate. Then a deterministic tolerance check
-turns that into an `ok` / `mismatch` verdict. The LLM is *not* in this loop — reconciliation is
-deterministic math, exactly as the safety guarantee (§3b) requires.
+value" line, the last table "Total" row, the largest currency figure, …) and select by
+**authority** — the most trustworthy parse rule wins, *independently of* the extracted sum. Picking
+the candidate closest to the sum would defeat the whole check: a wrong extraction could pick
+whichever subtotal agrees with it. Only after the stated total is chosen do we run a deterministic
+tolerance check to get an `ok` / `mismatch` verdict. The LLM is *not* in this loop — reconciliation
+is deterministic math, exactly as the safety guarantee (§3b) requires.
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ def _to_decimal(raw: str) -> Decimal | None:
 class TotalHypothesis:
     label: str            # which parse rule produced it (for the trace)
     value: Decimal
+    authority: int        # parse-rule priority: lower = more authoritative (0 = explicit labelled total)
 
 
 @dataclass
@@ -56,22 +59,27 @@ class ReconciliationAgent:
     def _candidates(self, text: str) -> list[TotalHypothesis]:
         cands: list[TotalHypothesis] = []
 
-        # H1: an explicit labelled total line ("Total account value: $X", "Portfolio valuation: Rs. X").
+        # H1 (authority 0): an explicit labelled total line ("Total account value: $X",
+        # "Portfolio valuation: Rs. X"). This is the statement's own declared total — the most
+        # authoritative signal, and the one we prefer regardless of the extracted sum.
         for label in ("Total account value", "Portfolio valuation", "Available balance",
                       "Total value", "Net worth"):
             m = re.search(rf"{label}[:\s]*(?:Rs\.?|\$|₹)?\s*({_NUM})", text, re.IGNORECASE)
             if m and (v := _to_decimal(m.group(1))) is not None:
-                cands.append(TotalHypothesis(f"labelled:{label}", v))
+                cands.append(TotalHypothesis(f"labelled:{label}", v, authority=0))
 
-        # H2: a table "Total" row — the figure following the word "Total".
-        for m in re.finditer(rf"\bTotal\b[^0-9]*({_NUM})", text):
+        # H2 (authority 1): a table "Total" row — a currency-prefixed figure on the same line as
+        # the word "Total". Anchored to a currency symbol so "Total shares: 1,995" and a bare
+        # "Total" header grabbing a far-off number don't qualify (finding #7).
+        for m in re.finditer(rf"\bTotal\b[^\n]*?(?:Rs\.?|\$|₹)\s*({_NUM})", text, re.IGNORECASE):
             if (v := _to_decimal(m.group(1))) is not None:
-                cands.append(TotalHypothesis("table-total-row", v))
+                cands.append(TotalHypothesis("table-total-row", v, authority=1))
 
-        # H3: the single largest money figure in the document (a total usually dominates line items).
+        # H3 (authority 2): the single largest money figure in the document (a total usually
+        # dominates line items). Weakest signal — only used when nothing labelled is present.
         figures = [v for raw in re.findall(_NUM, text) if (v := _to_decimal(raw)) is not None]
         if figures:
-            cands.append(TotalHypothesis("largest-figure", max(figures)))
+            cands.append(TotalHypothesis("largest-figure", max(figures), authority=2))
 
         return cands
 
@@ -82,8 +90,11 @@ class ReconciliationAgent:
             # No stated total to check against → can't disconfirm; treat as reconciled with delta 0.
             return ReconcileResult(None, sum_extracted, Decimal("0"), "ok", cands)
 
-        # Score each hypothesis by closeness to the extracted sum; keep the best.
-        best = min(cands, key=lambda c: abs(c.value - sum_extracted))
+        # Select the stated total by AUTHORITY (labelled line > table-total > largest-figure), NOT by
+        # closeness to the extracted sum. Choosing the closest candidate would let a wrong extraction
+        # pick whichever subtotal line agrees with it and reconcile spuriously (finding #2). Among
+        # equal-authority candidates, prefer the largest (a total dominates its own subtotals).
+        best = min(cands, key=lambda c: (c.authority, -c.value))
         delta = abs(best.value - sum_extracted)
 
         # Relative tolerance against the stated total (falls back to absolute if total is 0).

@@ -159,6 +159,26 @@ def test_idempotent_reingest_skips(config, ledger_factory, statements):
         assert s.scalar(select(func.count()).select_from(Holding)) == 3  # still just the first run
 
 
+def test_reconcile_with_lost_text_escalates_instead_of_silently_persisting(config, ledger_factory):
+    """Review #1: on a resume that lost the statement text, reconcile must NOT treat empty text as
+    an automatic 'ok'. With holdings present but no text to check against, it escalates to the human
+    (mismatch) rather than routing a possibly-wrong extraction straight to persist.
+    """
+    fake = FakeIngestionAgent.__new__(FakeIngestionAgent)  # skip PDF load; we drive reconcile directly
+    nodes = Nodes(config, ledger_factory, ingestion_agent=fake)
+
+    state = {
+        "extracted": [{"market_value": "100000", "asset_class": "equity",
+                       "geography": "us", "currency": "USD"}],
+        "raw_text": "",          # text unavailable (e.g. cross-process resume before this fix)
+        "file_hash": "hash-xyz",
+    }
+    out = nodes.reconcile(state)
+
+    assert out["reconcile_status"] == "mismatch"
+    assert out["stated_total"] is None
+
+
 def test_checkpointer_persists_state_across_get_state(config, ledger_factory, statements):
     """The paused run's State is durable in the checkpointer (resumable after the process 'forgets')."""
     short = [_holding("VOO", "Vanguard S&P 500 ETF", AssetClass.EQUITY, Geography.US, 120, 100000, "USD")]

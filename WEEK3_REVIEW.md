@@ -9,7 +9,12 @@ before Week 4 relies on them. Ranked by severity.
 
 ## CRITICAL
 
-### 1. reconcile reads raw text from a non-checkpointed instance cache → empty on resume → silent bad persist
+### 1. reconcile reads raw text from a non-checkpointed instance cache → empty on resume → silent bad persist  ✅ FIXED (2026-08-07)
+- **Fix landed:** `raw_text` now carried in `SetuState` (`ingest` returns it, `reconcile` reads
+  `state.get("raw_text")`); the `Nodes._raw_text` instance cache is gone. `reconcile` also escalates
+  to `mismatch` (not silent `ok`) when text is unavailable but holdings are present. Regression:
+  `tests/test_graph_ingest.py::test_reconcile_with_lost_text_escalates_instead_of_silently_persisting`.
+
 - **Where:** `setu/graph/nodes.py:105` (reads `self._raw_text`); cache at `nodes.py:71`, populated only in `ingest` (`nodes.py:79`).
 - **Bug:** `_raw_text` lives on the `Nodes` instance, NOT in `SetuState`, so the checkpointer never
   snapshots it. If the process dies after `ingest` checkpoints but before `reconcile` completes, a
@@ -22,7 +27,11 @@ before Week 4 relies on them. Ranked by severity.
   `ingest` returns it, `reconcile` reads `state.get(...)`. Also: distinguish "no total in document"
   from "text unavailable" — don't treat empty text as automatic `ok` when holdings are present.
 
-### 2. Reconciliation picks the candidate closest to the extracted sum → defeats the independent check
+### 2. Reconciliation picks the candidate closest to the extracted sum → defeats the independent check  ✅ FIXED (2026-08-07)
+- **Fix landed:** `TotalHypothesis` gained an `authority` rank (0 labelled > 1 table-total > 2
+  largest-figure); `run()` selects `min(cands, key=(authority, -value))` — by authority, never by
+  closeness to the sum. Regression: `tests/test_reconciliation.py::test_labelled_total_wins_over_a_closer_subtotal`.
+
 - **Where:** `setu/agents/reconciliation_agent.py:86` (`best = min(cands, key=lambda c: abs(c.value - sum_extracted))`).
 - **Bug:** the "stated total" is chosen as whichever candidate is numerically closest to the sum
   being verified, so the verifier picks the hypothesis that best agrees with the extraction. A wrong
@@ -74,7 +83,11 @@ before Week 4 relies on them. Ranked by severity.
 - **Fix:** either make `replan` feed something back (re-extract with different params → genuine
   self-correction), or delete the retry branch and route `mismatch` straight to `ask_user`.
 
-### 7. H2 "Total" regex captures non-total figures → junk candidates for the min-distance scorer
+### 7. H2 "Total" regex captures non-total figures → junk candidates for the min-distance scorer  ✅ FIXED (2026-08-07)
+- **Fix landed:** H2 regex now anchors to a currency-prefixed amount on the same line
+  (`\bTotal\b[^\n]*?(?:Rs\.?|\$|₹)\s*NUM`), so "Total shares: 1,995" and bare-header→far-number no
+  longer match. Regression: `tests/test_reconciliation.py::test_total_row_regex_ignores_share_counts_and_account_numbers`.
+
 - **Where:** `setu/agents/reconciliation_agent.py:67` (`re.finditer(r"\bTotal\b[^0-9]*(NUM)")`).
 - **Bug:** matches "Total shares: 1,995"→1995, "Total fees 200.00"→200; `[^0-9]*` spans newlines so a
   bare "Total" header grabs a number many lines below (e.g. account number). These equal-standing

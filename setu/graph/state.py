@@ -8,7 +8,7 @@ returning.
 
 Field lifecycle over a run:
   goal, statement_path        set at invoke
-  extracted, currency         written by `ingest`
+  extracted, currency, raw_text   written by `ingest`
   stated_total, sum_extracted,
   reconcile_status, reconcile_delta   written by `reconcile`
   user_decision               written on resume after the `ask_user` interrupt
@@ -59,6 +59,9 @@ class SetuState(TypedDict, total=False):
     extracted: list[ExtractedHoldingDict]
     file_hash: str
     already_ingested: bool
+    raw_text: str                         # statement text reconcile checks the stated total against;
+                                          # carried in State (not a Nodes-instance cache) so it
+                                          # survives cross-process / crash-recovery resume
 
     # --- written by `reconcile` ---
     stated_total: str | None              # decimal string parsed from the statement's Total line

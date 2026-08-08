@@ -67,8 +67,6 @@ class Nodes:
         self.session_factory = session_factory
         self.ingestion = ingestion_agent or IngestionAgent(config)
         self.reconciliation = reconciliation_agent or ReconciliationAgent(config)
-        # Ingestion produces the raw text reconcile needs; cache it per file_hash within a run.
-        self._raw_text: dict[str, str] = {}
 
     # --- ingest -----------------------------------------------------------------------------
     def ingest(self, state: SetuState) -> dict:
@@ -76,7 +74,6 @@ class Nodes:
         trace = [_ev("thought", "ingest", f"Parsing and extracting holdings from {path}.")]
 
         res: IngestionResult = self.ingestion.run(path)
-        self._raw_text[res.file_hash] = res.raw_text
 
         # Idempotency check (§2a): already in the ledger? Short-circuit downstream persistence.
         with self.session_factory() as session:
@@ -94,6 +91,7 @@ class Nodes:
             "currency": res.currency,
             "extracted": _holding_dicts(res.holdings),
             "file_hash": res.file_hash,
+            "raw_text": res.raw_text,
             "already_ingested": already,
             "trace": trace,
         }
@@ -102,7 +100,26 @@ class Nodes:
     def reconcile(self, state: SetuState) -> dict:
         extracted = state.get("extracted", [])
         summed = sum((Decimal(h["market_value"]) for h in extracted), Decimal("0"))
-        text = self._raw_text.get(state.get("file_hash", ""), "")
+        text = state.get("raw_text", "")
+
+        # Guard: text unavailable but holdings were extracted. This is NOT "the document states
+        # no total" — it means we can't run the independent check at all (e.g. a resume that lost
+        # the text). Escalate to the human instead of silently treating it as reconciled.
+        if not text.strip() and extracted:
+            return {
+                "stated_total": None,
+                "sum_extracted": str(summed),
+                "reconcile_delta": "0",
+                "reconcile_status": "mismatch",
+                "trace": [
+                    _ev("thought", "reconcile",
+                        f"Summed extracted value = {summed}, but statement text is unavailable — "
+                        "cannot verify against a stated total."),
+                    _ev("observation", "reconcile",
+                        "No statement text to reconcile against → escalating for human review "
+                        "rather than persisting unchecked."),
+                ],
+            }
 
         res = self.reconciliation.run(text, summed)
 
