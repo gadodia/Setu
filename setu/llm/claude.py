@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 from anthropic import Anthropic
 
@@ -20,6 +21,34 @@ from setu.config import Config, load_config
 
 class ClaudeError(RuntimeError):
     pass
+
+
+OFFICIAL_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
+
+
+def _personal_api_base_url(base_url: str) -> str:
+    """Allow only Anthropic's official HTTPS origin for personal Setu credentials."""
+    parsed = urlsplit(base_url)
+    try:
+        port = parsed.port
+    except ValueError:
+        port = -1
+    safe = (
+        parsed.scheme == "https"
+        and parsed.hostname == "api.anthropic.com"
+        and parsed.username is None
+        and parsed.password is None
+        and port in (None, 443)
+        and parsed.path.rstrip("/") == ""
+        and not parsed.query
+        and not parsed.fragment
+    )
+    if not safe:
+        raise ClaudeError(
+            "Setu's personal API key may only be sent to the official Anthropic API "
+            f"({OFFICIAL_ANTHROPIC_BASE_URL})."
+        )
+    return OFFICIAL_ANTHROPIC_BASE_URL
 
 
 @dataclass
@@ -41,12 +70,23 @@ ToolExecutor = Callable[[str, dict], Any]
 
 
 class ClaudeClient:
-    def __init__(self, config: Config | None = None):
+    def __init__(
+        self,
+        config: Config | None = None,
+        *,
+        base_url: str = OFFICIAL_ANTHROPIC_BASE_URL,
+    ):
         self.config = config or load_config()
         if not self.config.anthropic_api_key:
             raise ClaudeError("ANTHROPIC_API_KEY not set (add it to .env).")
         self.model = self.config.model_router.reasoning.model
-        self._client = Anthropic(api_key=self.config.anthropic_api_key)
+        self.base_url = _personal_api_base_url(base_url)
+        self._client = Anthropic(
+            api_key=self.config.anthropic_api_key.get_secret_value(),
+            # Pass explicitly so an inherited corporate ANTHROPIC_BASE_URL cannot redirect
+            # Setu's personal credential to another gateway.
+            base_url=self.base_url,
+        )
 
     def run_tool_loop(
         self,

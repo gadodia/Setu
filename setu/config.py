@@ -7,14 +7,13 @@ FX rates are parsed to ``Decimal`` here so no float ever enters a money computat
 
 from __future__ import annotations
 
-import os
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from dotenv import dotenv_values
+from pydantic import BaseModel, Field, SecretStr
 
 # Project root = the directory containing config.yaml (one level above this file's package).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -60,7 +59,7 @@ class Config(BaseModel):
     ollama: Ollama = Field(default_factory=Ollama)
 
     # Secrets loaded from .env (never from config.yaml).
-    anthropic_api_key: str | None = None
+    anthropic_api_key: SecretStr | None = None
 
     @property
     def db_url(self) -> str:
@@ -93,13 +92,17 @@ def _coerce_decimals(raw: dict) -> dict:
 @lru_cache(maxsize=1)
 def load_config(config_path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
     """Load config.yaml + .env into a typed Config (cached; call load_config.cache_clear() to reload)."""
-    load_dotenv(PROJECT_ROOT / ".env")
+    # Read Setu's key only from this project's gitignored .env. Deliberately do not call
+    # load_dotenv()/os.getenv(): a corporate shell may export a different ANTHROPIC_API_KEY,
+    # and inherited credentials must never silently replace this personal-project credential.
+    project_env = dotenv_values(PROJECT_ROOT / ".env")
 
     with open(config_path) as f:
         raw = yaml.safe_load(f) or {}
 
     raw = _coerce_decimals(raw)
     config = Config(**raw)
-    config.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+    key = project_env.get("ANTHROPIC_API_KEY")
+    config.anthropic_api_key = SecretStr(key) if key else None
     config.resolve_paths()
     return config
