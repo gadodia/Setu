@@ -23,6 +23,7 @@ data/setu.db-*
 data/inbox/
 data/checkpoints.db
 data/checkpoints.db-*
+data/backups/
 # Generated synthetic artifacts (recreated by `setu seed`; not source)
 data/synthetic/ground_truth.json
 data/synthetic/*.pdf
