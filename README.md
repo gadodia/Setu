@@ -158,6 +158,10 @@ the authoritative description of the final runtime.
   risks, health-score math, suggestions, and intentional data gaps.
 - [`docs/EVALUATION.md`](docs/EVALUATION.md) — evaluation questions, final results, reproducibility,
   and limitations.
+- [`docs/PRIVACY_AND_DATA_SAFETY.md`](docs/PRIVACY_AND_DATA_SAFETY.md) — repository and runtime data
+  boundaries for safe use.
 - [`StudyGuide/`](StudyGuide/README.md) — learn-as-you-build curriculum.
 
 Base currency: **USD**. Package manager: **uv**.
+
+Licensed under the [MIT License](LICENSE).
