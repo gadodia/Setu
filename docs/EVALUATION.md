@@ -40,6 +40,11 @@ Local extraction model: **qwen2.5:7b through Ollama**
 | Live holding extraction | 7/7 | 7/7 | Pass |
 | Regression suite | 110 passed, 0 failed | No failures | Pass |
 
+A separate synthetic Ask Setu smoke check verified the personal Claude path: the model used only
+`analyze_portfolio`, completed in two tool rounds, returned non-truncated CommonMark, and produced
+non-empty rendered HTML within the configured limits. The recorded answer is in
+[`evaluation/final-ask-setu.md`](evaluation/final-ask-setu.md).
+
 ## What the tests cover
 
 The 110-test regression suite includes:
@@ -83,6 +88,8 @@ uv run setu evaluate --live-model
   scanned-image benchmark.
 - Passing safety tests demonstrates the implemented boundaries, not regulatory compliance or
   investment suitability.
+- The Ask Setu artifact records one non-deterministic model response; repeat wording may vary even
+  when the tool evidence is unchanged.
 
 These limits are part of the result. The evaluation establishes a repeatable capstone baseline and a
 framework for adding anonymized documents later without changing the metrics.

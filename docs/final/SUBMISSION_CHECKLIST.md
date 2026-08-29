@@ -17,6 +17,7 @@
 - [x] Final report source follows the official ten-section outline and is 1,481 words.
 - [x] Ten-slide presentation narrative includes visible copy, speaker notes, sources, and a live demo.
 - [x] Synthetic dashboard smoke test reproduces `$275,488.50` net worth and `37/100` health.
+- [x] Synthetic Ask Setu smoke test returns bounded, rendered CommonMark from sanitized tools.
 
 ## Artifact production
 
