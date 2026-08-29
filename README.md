@@ -160,6 +160,8 @@ the authoritative description of the final runtime.
   and limitations.
 - [`docs/PRIVACY_AND_DATA_SAFETY.md`](docs/PRIVACY_AND_DATA_SAFETY.md) — repository and runtime data
   boundaries for safe use.
+- [`docs/final/FINAL_CAPSTONE_REPORT.md`](docs/final/FINAL_CAPSTONE_REPORT.md) — cohesive final report
+  draft following the official capstone outline.
 - [`StudyGuide/`](StudyGuide/README.md) — learn-as-you-build curriculum.
 
 Base currency: **USD**. Package manager: **uv**.
