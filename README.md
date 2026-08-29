@@ -156,6 +156,8 @@ the authoritative description of the final runtime.
 - [`FINAL_DEMO.md`](FINAL_DEMO.md) — preflight checks, demo sequence, expected figures, and recovery.
 - [`SYNTHETIC_DEMO_SCENARIO.md`](SYNTHETIC_DEMO_SCENARIO.md) — demo holdings, cost basis, planted
   risks, health-score math, suggestions, and intentional data gaps.
+- [`docs/EVALUATION.md`](docs/EVALUATION.md) — evaluation questions, final results, reproducibility,
+  and limitations.
 - [`StudyGuide/`](StudyGuide/README.md) — learn-as-you-build curriculum.
 
 Base currency: **USD**. Package manager: **uv**.

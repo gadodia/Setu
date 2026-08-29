@@ -1,0 +1,76 @@
+{
+  "run_date": "2026-08-29",
+  "passed": true,
+  "elapsed_seconds": 14.64,
+  "live_local_model": true,
+  "model": "qwen2.5:7b",
+  "metrics": [
+    {
+      "name": "Document classification accuracy",
+      "value": "6/6",
+      "target": "6/6",
+      "passed": true,
+      "note": "Brokerage, 401(k), CAS, bank, ULIP/term, and endowment synthetic PDFs."
+    },
+    {
+      "name": "Golden reconciliation pass rate",
+      "value": "4/4",
+      "target": "4/4",
+      "passed": true,
+      "note": "Expected totals are derived independently from the canonical synthetic portfolio."
+    },
+    {
+      "name": "Mismatch escalation trigger",
+      "value": "triggered",
+      "target": "triggered",
+      "passed": true,
+      "note": "A material under-extraction routes to review instead of persistence."
+    },
+    {
+      "name": "Net-worth ground-truth error",
+      "value": "0E-9",
+      "target": "0",
+      "passed": true,
+      "note": "Exact Decimal aggregation across USD and INR."
+    },
+    {
+      "name": "ROI evidence coverage",
+      "value": "7/7 positions; 100.0% of investment value",
+      "target": "100.0% for demo corpus",
+      "passed": true,
+      "note": "ROI remains unknown for a holding without source-stated cost basis."
+    },
+    {
+      "name": "Unsupported term-policy valuation rate",
+      "value": "0/1",
+      "target": "0 unsafe valuations",
+      "passed": true,
+      "note": "Term coverage is shown but never counted as an asset."
+    },
+    {
+      "name": "Explainable risk-scenario coverage",
+      "value": "5 components; current=elevated, short_term=elevated, long_term=elevated",
+      "target": "current, short_term, and long_term all evaluated",
+      "passed": true,
+      "note": "The score is deterministic and includes actions plus explicit missing data."
+    },
+    {
+      "name": "Raw-document cloud tool exposure",
+      "value": "none",
+      "target": "none",
+      "passed": true,
+      "note": "Claude receives sanitized ledger calculations, never PDF text or filesystem paths."
+    },
+    {
+      "name": "Live local-model holding accuracy",
+      "value": "7/7",
+      "target": "7/7",
+      "passed": true,
+      "note": "Exact name, current value, and document-backed cost basis on the demo corpus."
+    }
+  ],
+  "regression_tests": {
+    "passed": 110,
+    "failed": 0
+  }
+}
