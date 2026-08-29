@@ -49,7 +49,7 @@ uv run setu demo --reset
 This creates a clean, source-linked synthetic ledger and opens `http://127.0.0.1:8765`. The six
 source PDFs are in `data/synthetic/`.
 
-## Suggested 8–10 minute story
+## Suggested 8-10 minute story
 
 1. **Problem (30 seconds).** Financial data is split across US brokerage and retirement accounts,
    Indian mutual funds and banks, and insurance documents with different value meanings.
@@ -69,10 +69,10 @@ source PDFs are in `data/synthetic/`.
    - ROI evidence coverage: **100% of investment value in the synthetic corpus**
 
    Explain that ROI excludes cash, insurance, fees, taxes, and distributions. If cost is absent,
-   Setu shows “unknown” instead of guessing.
+   Setu shows "unknown" instead of guessing.
 
-4. **Risk over time (90 seconds).** Open “Portfolio health.” The explainable score is **37/100**
-   (“Needs attention”), with all three horizons evaluated:
+4. **Risk over time (90 seconds).** Open "Portfolio health." The explainable score is **37/100**
+   ("Needs attention"), with all three horizons evaluated:
 
    - Current: elevated because several independent indicators are outside the declared profile.
    - Short term: cash is **0.7%** of investable assets and covers **76.2%** of the three known
@@ -83,7 +83,7 @@ source PDFs are in `data/synthetic/`.
    Show the five score components and the review actions. Explain that this is a deterministic
    diagnostic, not a suitability rating or a prediction.
 
-5. **Decision support (45 seconds).** Open “What needs attention.” Point out the largest position,
+5. **Decision support (45 seconds).** Open "What needs attention." Point out the largest position,
    currency guardrail, allocation drift, and evidence-backed next reviews. Setu suggests questions
    and planning steps; it does not name a security to buy or execute a rebalance.
 
@@ -92,17 +92,18 @@ source PDFs are in `data/synthetic/`.
    surrender evidence. The LIC policy deliberately has no current surrender value, so Setu shows an
    explicit data gap instead of rejecting the policy or inventing a value.
 
-7. **User control and provenance (60 seconds).** In Data sources, turn one statement off. Net worth,
-   ROI coverage, allocations, and insights recalculate immediately. Turn it back on. No record is
-   deleted.
+7. **User control and provenance (60 seconds).** In Data sources, turn off
+   `fidelity_brokerage.pdf`. Net worth should move from **$275,488.50** to **$125,488.50**, while ROI,
+   allocations, and insights recalculate from the remaining sources. Turn it back on and confirm net
+   worth returns exactly to **$275,488.50**. No record is deleted.
 
 8. **Ingestion safeguards (60 seconds).** Upload one of the already seeded synthetic PDFs. Setu
    identifies the exact file hash and reports it as already imported, demonstrating idempotency.
    Mention that the HDFC bank file now follows a dedicated balance path: closing balance is
    extracted without an LLM and reconciled against available balance.
 
-9. **Grounded Q&A (optional, 60 seconds).** Ask: “Explain my current, short-term, and long-term
-   risks. What should I review first, and what important data is missing?” Show the readable answer,
+9. **Grounded Q&A (optional, 60 seconds).** Ask: "Explain my current, short-term, and long-term
+   risks. What should I review first, and what important data is missing?" Show the readable answer,
    tool names beneath it, and the sanitized-cloud notice.
 
 The complete data story and score math are documented in

@@ -18,6 +18,7 @@
 - [x] Ten-slide presentation narrative includes visible copy, speaker notes, sources, and a live demo.
 - [x] Synthetic dashboard smoke test reproduces `$275,488.50` net worth and `37/100` health.
 - [x] Synthetic Ask Setu smoke test returns bounded, rendered CommonMark from sanitized tools.
+- [x] Source deactivation changes synthetic net worth and reactivation restores the exact baseline.
 - [x] Fresh GitHub clone installs and passes the offline evaluation and all 110 tests.
 
 ## Artifact production

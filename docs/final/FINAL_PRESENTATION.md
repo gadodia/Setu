@@ -185,8 +185,8 @@ is stated.
 The investment view shows $262,135.20 of current investment value against $183,045 of source-stated
 cost, producing 43.21% ROI. I will open the attention area to show that the 37/100 result is composed
 from target alignment, concentration, currency, liquidity, and data completeness. Then I will open
-Data sources and deactivate one statement. The linked records disappear from portfolio calculations
-and return when I reactivate it. This demonstrates that retrieval of a number is not the endpoint:
+Data sources and deactivate `fidelity_brokerage.pdf`. Net worth falls to $125,488.50 and returns
+exactly to $275,488.50 when I reactivate it. This demonstrates that retrieving a number is not the endpoint:
 Setu preserves evidence, exposes uncertainty, and gives the user control over the active dataset.
 
 [Sources: `SYNTHETIC_DEMO_SCENARIO.md`, `FINAL_DEMO.md`]
