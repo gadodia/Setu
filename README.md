@@ -162,6 +162,8 @@ the authoritative description of the final runtime.
   boundaries for safe use.
 - [`docs/final/FINAL_CAPSTONE_REPORT.md`](docs/final/FINAL_CAPSTONE_REPORT.md) — cohesive final report
   draft following the official capstone outline.
+- [`docs/final/FINAL_PRESENTATION.md`](docs/final/FINAL_PRESENTATION.md) — ten-slide narrative,
+  visible copy, demo sequence, timing, and speaker notes.
 - [`StudyGuide/`](StudyGuide/README.md) — learn-as-you-build curriculum.
 
 Base currency: **USD**. Package manager: **uv**.
