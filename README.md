@@ -162,6 +162,8 @@ the authoritative description of the final runtime.
   boundaries for safe use.
 - [`docs/final/FINAL_CAPSTONE_REPORT.md`](docs/final/FINAL_CAPSTONE_REPORT.md) — cohesive final report
   draft following the official capstone outline.
+- [`docs/final/Setu_Final_Capstone_Report.pdf`](docs/final/Setu_Final_Capstone_Report.pdf) — rendered,
+  visually verified final report for submission.
 - [`docs/final/FINAL_PRESENTATION.md`](docs/final/FINAL_PRESENTATION.md) — ten-slide narrative,
   visible copy, demo sequence, timing, and speaker notes.
 - [`docs/final/SUBMISSION_CHECKLIST.md`](docs/final/SUBMISSION_CHECKLIST.md) — final artifact,

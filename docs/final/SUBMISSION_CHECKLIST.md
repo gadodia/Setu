@@ -22,8 +22,8 @@
 
 ## Artifact production
 
-- [ ] Export the final report to DOCX and PDF.
-- [ ] Render and visually inspect every report page.
+- [x] Export the final report to the Canvas-accepted PDF format.
+- [x] Render and visually inspect all three report pages.
 - [ ] Build the 10-slide presentation deck.
 - [ ] Capture a real screenshot from the isolated synthetic dashboard only.
 - [ ] Render and visually inspect every slide; fix overflow and overlap.
