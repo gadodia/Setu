@@ -14,6 +14,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from setu.config import Config, load_config
@@ -23,6 +24,7 @@ from setu.models import (
     Geography,
     Holding,
     PolicyValue,
+    Statement,
 )
 from setu.tools import fx
 
@@ -37,6 +39,11 @@ class Position:
     currency: str
     native_value: Decimal
     base_value: Decimal
+    native_cost_basis: Decimal | None
+    base_cost_basis: Decimal | None
+    kind: str
+    account_id: int
+    statement_id: int | None
 
 
 @dataclass
@@ -70,6 +77,17 @@ def _latest_by_account(rows, as_of_attr: str = "as_of_date"):
     return [r for r in rows if getattr(r, as_of_attr) == max_date[r.account_id]]
 
 
+def _active_rows(session: Session, model):
+    """Return rows whose source is active; unlinked manual/synthetic rows remain included."""
+    source_id = model.statement_id
+    query = (
+        select(model)
+        .outerjoin(Statement, source_id == Statement.id)
+        .where(or_(source_id.is_(None), Statement.is_active.is_(True)))
+    )
+    return session.scalars(query).all()
+
+
 def compute_net_worth(session: Session, config: Config | None = None) -> NetWorth:
     """Aggregate the whole ledger into a base-currency net-worth + allocation view."""
     config = config or load_config()
@@ -78,7 +96,7 @@ def compute_net_worth(session: Session, config: Config | None = None) -> NetWort
     positions: list[Position] = []
 
     # Holdings — latest snapshot per account.
-    for h in _latest_by_account(session.query(Holding).all()):
+    for h in _latest_by_account(_active_rows(session, Holding)):
         positions.append(
             Position(
                 label=h.name or h.symbol or "holding",
@@ -87,11 +105,18 @@ def compute_net_worth(session: Session, config: Config | None = None) -> NetWort
                 currency=h.currency,
                 native_value=h.market_value,
                 base_value=fx.convert(h.market_value, h.currency, config),
+                native_cost_basis=h.cost_basis,
+                base_cost_basis=(
+                    None if h.cost_basis is None else fx.convert(h.cost_basis, h.currency, config)
+                ),
+                kind="holding",
+                account_id=h.account_id,
+                statement_id=h.statement_id,
             )
         )
 
     # Bank balances — latest per account, always CASH.
-    for b in _latest_by_account(session.query(Balance).all()):
+    for b in _latest_by_account(_active_rows(session, Balance)):
         acct = b.account
         positions.append(
             Position(
@@ -101,11 +126,16 @@ def compute_net_worth(session: Session, config: Config | None = None) -> NetWort
                 currency=b.currency,
                 native_value=b.amount,
                 base_value=fx.convert(b.amount, b.currency, config),
+                native_cost_basis=None,
+                base_cost_basis=None,
+                kind="balance",
+                account_id=b.account_id,
+                statement_id=b.statement_id,
             )
         )
 
     # Policy values — latest per account; asset_value already excludes TERM (=0).
-    for p in _latest_by_account(session.query(PolicyValue).all()):
+    for p in _latest_by_account(_active_rows(session, PolicyValue)):
         if p.asset_value and p.asset_value > 0:
             acct = p.account
             positions.append(
@@ -116,6 +146,11 @@ def compute_net_worth(session: Session, config: Config | None = None) -> NetWort
                     currency=p.currency,
                     native_value=p.asset_value,
                     base_value=fx.convert(p.asset_value, p.currency, config),
+                    native_cost_basis=None,
+                    base_cost_basis=None,
+                    kind="insurance",
+                    account_id=p.account_id,
+                    statement_id=p.statement_id,
                 )
             )
 

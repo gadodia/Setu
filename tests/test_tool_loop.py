@@ -88,3 +88,24 @@ def test_tool_loop_records_executor_errors(claude_client):
     # Loop still completes; the error is surfaced as a tool_result, not a crash.
     tool_results = [s for s in result.trace if s.kind == "tool_result"]
     assert tool_results and "boom" in str(tool_results[0].content)
+
+
+def test_tool_loop_uses_configured_output_limit_and_reports_truncation(claude_client):
+    recorded = {}
+
+    class TruncatedMessages:
+        def create(self, **kwargs):
+            recorded.update(kwargs)
+            return SimpleNamespace(
+                stop_reason="max_tokens",
+                content=[_text_block("### Answer\n\nA partial grounded answer")],
+            )
+
+    claude_client._client = SimpleNamespace(messages=TruncatedMessages())
+
+    result = claude_client.run_tool_loop("Explain the portfolio", tools=[], executor=lambda *_: {})
+
+    assert recorded["max_tokens"] == claude_client.config.claude.max_output_tokens
+    assert result.truncated is True
+    assert result.stop_reason == "max_tokens"
+    assert result.answer.startswith("### Answer")

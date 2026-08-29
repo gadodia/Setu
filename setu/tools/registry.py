@@ -13,7 +13,12 @@ from typing import Any, Callable
 from sqlalchemy.orm import Session
 
 from setu.config import Config, load_config
-from setu.tools import calc, fx, pdf_extract
+from setu.tools import calc, fx
+from setu.tools.insights import (
+    build_portfolio_insights,
+    compute_investment_performance,
+    compute_portfolio_health,
+)
 
 # --- Anthropic tool schemas ------------------------------------------------------------------
 
@@ -39,16 +44,12 @@ TOOL_SCHEMAS: list[dict] = [
         "input_schema": {"type": "object", "properties": {}},
     },
     {
-        "name": "pdf_extract",
-        "description": "Extract raw text and tables from a PDF statement at the given path. "
-                       "Returns text and table rows for you to interpret.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "Filesystem path to the PDF."},
-            },
-            "required": ["path"],
-        },
+        "name": "analyze_portfolio",
+        "description": "Return deterministic, source-backed investment performance and ranked "
+                       "portfolio attention signals. ROI is included only where statements "
+                       "provide cost basis; use this for return, concentration, currency-risk, "
+                       "allocation-drift, short/long-term risk, health-score, and data-gap questions.",
+        "input_schema": {"type": "object", "properties": {}},
     },
 ]
 
@@ -80,12 +81,25 @@ def build_executor(session: Session, config: Config | None = None) -> Callable[[
                 "by_currency": {k: str(v) for k, v in nw.by_currency.items()},
             }
 
-        if name == "pdf_extract":
-            doc = pdf_extract.extract(tool_input["path"])
+        if name == "analyze_portfolio":
+            nw = calc.compute_net_worth(session, config)
+            performance = compute_investment_performance(nw)
+            portfolio_insights = build_portfolio_insights(
+                session,
+                config,
+                net_worth=nw,
+            )
+            health = compute_portfolio_health(session, config, net_worth=nw)
             return {
-                "path": doc.path,
-                "text": doc.full_text,
-                "tables": doc.all_tables,
+                "base_currency": nw.base_currency,
+                "performance": performance.as_dict(),
+                "insights": [insight.as_dict() for insight in portfolio_insights],
+                "health": health.as_dict(),
+                "limitations": (
+                    "ROI excludes positions without source-stated cost basis, cash, insurance, "
+                    "fees, taxes, and distributions. The health score is a deterministic "
+                    "portfolio diagnostic, not investment advice or a suitability assessment."
+                ),
             }
 
         raise ValueError(f"Unknown tool: {name!r}")

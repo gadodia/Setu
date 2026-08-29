@@ -63,6 +63,9 @@ class LoopResult:
     answer: str
     trace: list[TraceStep] = field(default_factory=list)
     rounds: int = 0
+    stop_reason: str | None = None
+    truncated: bool = False
+    max_output_tokens: int = 0
 
 
 # A tool executor maps a tool name + input dict to a JSON-serializable result.
@@ -94,17 +97,30 @@ class ClaudeClient:
         tools: list[dict],
         executor: ToolExecutor,
         system: str | None = None,
-        max_rounds: int = 8,
+        max_rounds: int | None = None,
+        max_output_tokens: int | None = None,
     ) -> LoopResult:
         """Run the agentic tool-calling loop until Claude produces a final text answer."""
+        round_limit = (
+            self.config.claude.max_tool_rounds if max_rounds is None else max_rounds
+        )
+        output_limit = (
+            self.config.claude.max_output_tokens
+            if max_output_tokens is None
+            else max_output_tokens
+        )
+        if round_limit < 1:
+            raise ValueError("max_rounds must be at least 1")
+        if output_limit < 1:
+            raise ValueError("max_output_tokens must be at least 1")
         messages: list[dict] = [{"role": "user", "content": user_prompt}]
-        result = LoopResult(answer="")
+        result = LoopResult(answer="", max_output_tokens=output_limit)
 
-        for round_i in range(1, max_rounds + 1):
+        for round_i in range(1, round_limit + 1):
             result.rounds = round_i
             resp = self._client.messages.create(
                 model=self.model,
-                max_tokens=2048,
+                max_tokens=output_limit,
                 system=system or "",
                 tools=tools,
                 messages=messages,
@@ -123,9 +139,11 @@ class ClaudeClient:
 
             # No tool calls → Claude is done; collect final text.
             if resp.stop_reason != "tool_use":
+                result.stop_reason = resp.stop_reason
                 result.answer = "".join(
                     b.text for b in resp.content if b.type == "text"
                 ).strip()
+                result.truncated = resp.stop_reason == "max_tokens"
                 return result
 
             # Append the assistant turn, then execute each requested tool.
@@ -150,7 +168,7 @@ class ClaudeClient:
                 })
             messages.append({"role": "user", "content": tool_results})
 
-        raise ClaudeError(f"Tool loop did not converge in {max_rounds} rounds.")
+        raise ClaudeError(f"Tool loop did not converge in {round_limit} rounds.")
 
 
 def _json(obj: Any) -> str:

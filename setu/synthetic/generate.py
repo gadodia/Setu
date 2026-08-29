@@ -21,7 +21,9 @@ from setu.models import (
     Account,
     Balance,
     Holding,
+    InsurancePolicy,
     Institution,
+    Obligation,
     PolicyValue,
     RiskProfile,
 )
@@ -49,12 +51,14 @@ def seed_portfolio(session: Session, config: Config | None = None) -> None:
             account_ref=acct_spec.account_ref,
         )
         session.add(account)
+        session.flush()
 
         for h in acct_spec.holdings:
             session.add(Holding(
                 account=account, symbol=h.symbol, name=h.name,
                 asset_class=h.asset_class, geography=h.geography,
                 quantity=h.quantity, market_value=h.market_value,
+                cost_basis=h.cost_basis,
                 currency=h.currency, as_of_date=AS_OF,
             ))
 
@@ -65,11 +69,46 @@ def seed_portfolio(session: Session, config: Config | None = None) -> None:
             ))
 
         for p in acct_spec.policies:
-            session.add(PolicyValue(
-                account=account, policy_name=p.name, policy_type=p.policy_type,
-                sum_assured=p.sum_assured, asset_value=p.asset_value,
-                currency=p.currency, as_of_date=AS_OF,
+            current_value_status = (
+                "not_applicable"
+                if p.policy_type.value == "TERM"
+                else "verified"
+                if p.asset_value is not None
+                else "not_provided"
+            )
+            session.add(InsurancePolicy(
+                account_id=account.id,
+                policy_name=p.name,
+                policy_type=p.policy_type,
+                plan_number=p.plan_number,
+                status="In force",
+                sum_assured=p.sum_assured,
+                currency=p.currency,
+                commencement_date=p.commencement_date,
+                maturity_date=p.maturity_date,
+                policy_term_years=p.policy_term_years,
+                premium_amount=p.premium_amount,
+                premium_due_date=p.premium_due_date,
+                premium_mode=p.premium_mode,
+                document_type="POLICY_STATEMENT",
+                evidence_status=p.evidence_status,
+                current_value_status=current_value_status,
             ))
+            if p.asset_value is not None and p.asset_value > 0:
+                session.add(PolicyValue(
+                    account=account, policy_name=p.name, policy_type=p.policy_type,
+                    sum_assured=p.sum_assured, asset_value=p.asset_value,
+                    currency=p.currency, as_of_date=AS_OF,
+                ))
+            if p.premium_amount is not None and p.premium_amount > 0:
+                session.add(Obligation(
+                    account_id=account.id,
+                    description=f"Premium: {p.name}",
+                    amount=p.premium_amount,
+                    currency=p.currency,
+                    due_date=p.premium_due_date,
+                    recurring=True,
+                ))
 
     session.add(RiskProfile(**RISK_PROFILE))
     session.commit()
@@ -103,7 +142,7 @@ def write_ground_truth(config: Config | None = None) -> dict:
             add(by_geography, acct.geography.value, base_val)
             add(by_currency, acct.currency.upper(), base_val)
         for p in acct.policies:
-            if p.asset_value > 0:
+            if p.asset_value is not None and p.asset_value > 0:
                 base_val = p.asset_value * fx[p.currency]
                 add(by_asset_class, "INSURANCE_CASH_VALUE", base_val)
                 add(by_geography, acct.geography.value, base_val)
@@ -118,7 +157,10 @@ def write_ground_truth(config: Config | None = None) -> dict:
         "by_asset_class": {k: str(v) for k, v in by_asset_class.items()},
         "by_geography": {k: str(v) for k, v in by_geography.items()},
         "by_currency": {k: str(v) for k, v in by_currency.items()},
-        "notes": "Term policy (sum assured 1,00,00,000 INR) excluded from net worth by design.",
+        "notes": (
+            "Term coverage and the LIC policy without a stated current surrender value are "
+            "excluded from net worth by design. All investment holdings include source-stated cost basis."
+        ),
     }
 
     out_path = config.paths.synthetic_dir / "ground_truth.json"

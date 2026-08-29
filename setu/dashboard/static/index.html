@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Setu local multi-agent financial workspace">
+  <title>Setu - Personal Agent Workspace</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Setu home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span><strong>Setu</strong><small>Personal agent workspace</small></span>
+      </a>
+      <div class="privacy-badge"><span class="status-dot"></span> Local and private</div>
+      <button class="icon-button" id="refresh-button" type="button" aria-label="Refresh dashboard">Refresh</button>
+      <button class="icon-button logout-button" id="logout-button" type="button">Sign out</button>
+    </header>
+
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <nav>
+        <p class="nav-label">Workspace</p>
+        <button class="nav-item active" type="button"><span aria-hidden="true">⌂</span>Home</button>
+        <button class="nav-item" type="button"><span aria-hidden="true">⇩</span>Inbox <span class="nav-count">0</span></button>
+        <button class="nav-item" type="button"><span aria-hidden="true">✓</span>Reviews <span class="nav-count">0</span></button>
+        <button class="nav-item" type="button"><span aria-hidden="true">▤</span>Artifacts</button>
+
+        <p class="nav-label agent-label">Agents</p>
+        <div id="agent-nav" class="agent-nav" aria-live="polite">
+          <div class="agent-nav-skeleton"></div>
+          <div class="agent-nav-skeleton"></div>
+          <div class="agent-nav-skeleton"></div>
+        </div>
+      </nav>
+      <div class="sidebar-foot">
+        <span class="status-dot"></span>
+        <span><strong>Systems ready</strong><small>Ledger and local models</small></span>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="workspace-head">
+        <div>
+          <p class="eyebrow">Financial Agent</p>
+          <h1>Your financial picture</h1>
+          <p class="lede">A grounded view of your accounts, policies, and investments across the US and India.</p>
+        </div>
+        <div class="head-actions">
+          <button class="button secondary" id="import-button" type="button">Import document</button>
+          <button class="button primary" id="ask-button" type="button">Ask Setu</button>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Financial overview">
+        <article class="card net-worth-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Net worth</p><p class="card-context">Converted to your base currency</p></div>
+            <span class="verified-pill">Verified ledger</span>
+          </div>
+          <div class="net-worth" id="net-worth">--</div>
+          <div class="summary-metrics">
+            <div><span>Accounts</span><strong id="account-count">--</strong></div>
+            <div><span>Holdings</span><strong id="holding-count">--</strong></div>
+            <div><span>Policies</span><strong id="policy-count">--</strong></div>
+          </div>
+        </article>
+
+        <article class="card allocation-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Allocation</p><p class="card-context">Where your wealth sits</p></div>
+            <div class="segmented" role="group" aria-label="Allocation view">
+              <button class="segment active" type="button" data-allocation="asset_class">Class</button>
+              <button class="segment" type="button" data-allocation="geography">Geography</button>
+              <button class="segment" type="button" data-allocation="currency">Currency</button>
+            </div>
+          </div>
+          <div id="allocation-bars" class="allocation-bars"><p class="empty">Loading allocation...</p></div>
+        </article>
+
+        <article class="card performance-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Investment performance</p><p class="card-context">Only where a statement provides cost basis</p></div>
+            <span class="verified-pill" id="roi-status">Source-backed</span>
+          </div>
+          <div class="performance-metrics" id="performance-metrics">
+            <p class="empty">Loading investment performance...</p>
+          </div>
+          <p class="performance-note" id="performance-note"></p>
+        </article>
+
+        <article class="card insights-card">
+          <div class="card-head">
+            <div><p class="card-kicker">What needs attention</p><p class="card-context">Evidence-backed signals, not automated advice</p></div>
+            <span class="count-pill" id="insight-count">0 signals</span>
+          </div>
+          <div class="insight-list" id="insight-list"><p class="empty">Loading portfolio signals...</p></div>
+        </article>
+
+        <article class="card health-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Portfolio health</p><p class="card-context">Current, short-term, and long-term risk from explainable ledger checks</p></div>
+            <span class="profile-pill" id="health-as-of">Not scored</span>
+          </div>
+          <div id="health-content" class="health-content"><p class="empty">Loading portfolio health...</p></div>
+        </article>
+
+        <article class="card positions-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Holdings and policies</p><p class="card-context">Latest valued positions</p></div>
+            <span class="count-pill" id="position-count">0 positions</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Position</th><th>Class</th><th>Region</th><th class="number">Value</th><th class="number">Cost basis</th><th class="number">Gain / ROI</th></tr></thead>
+              <tbody id="positions-body"><tr><td colspan="6" class="empty">Loading positions...</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card sources-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Data sources</p><p class="card-context">Control which imported documents can influence your portfolio</p></div>
+            <span class="count-pill" id="source-count">0 sources</span>
+          </div>
+          <div class="source-controls">
+            <p class="source-note">Turning a source off does not delete it. Setu keeps its validated records and provenance, but excludes them from portfolio calculations and policy views until you turn it on again.</p>
+            <div class="source-list" id="source-list" aria-live="polite">
+              <p class="empty">Loading imported sources...</p>
+            </div>
+            <div class="unlinked-note" id="unlinked-source-note" hidden></div>
+            <section class="source-upload-section" id="source-upload-section" aria-labelledby="source-upload-title" hidden>
+              <div class="source-subhead">
+                <h3 id="source-upload-title">Other upload attempts</h3>
+                <span>Processing, review, duplicates, rejected, or failed</span>
+              </div>
+              <div class="source-upload-list" id="source-upload-list"></div>
+            </section>
+            <p class="source-storage-note">For privacy, uploaded PDF bytes are deleted after processing. This list controls the validated records retained in the ledger.</p>
+          </div>
+        </article>
+
+        <article class="card policies-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Insurance policies</p><p class="card-context">Coverage, policy value, premiums, and validation status</p></div>
+            <span class="count-pill" id="policy-list-count">0 policies</span>
+          </div>
+          <div class="policy-list" id="policy-list"><p class="empty">Loading policy details...</p></div>
+        </article>
+
+        <article class="card risk-card">
+          <div class="card-head">
+            <div><p class="card-kicker">Risk alignment</p><p class="card-context">Actual allocation against your declared profile</p></div>
+            <span class="profile-pill" id="profile-label">Not set</span>
+          </div>
+          <div id="risk-content" class="risk-content"><p class="empty">Loading profile...</p></div>
+        </article>
+      </section>
+    </main>
+
+    <aside class="activity-rail" aria-label="Activity and review queue">
+      <div class="rail-head">
+        <div><p class="eyebrow">Activity</p><h2>What Setu did</h2></div>
+        <span class="live-pill"><span class="status-dot"></span>Live</span>
+      </div>
+      <p class="rail-note">Actions, sources, and outcomes are shown here. Private model reasoning is not displayed.</p>
+      <div class="review-box" id="review-summary">
+        <div><strong>Review queue</strong><span>Items that need your approval</span></div>
+        <span class="review-count" id="review-count">0</span>
+      </div>
+      <div id="review-list" class="review-list" aria-live="polite"></div>
+      <p class="rail-section-label">Recent imports</p>
+      <div id="run-list" class="run-list" aria-live="polite">
+        <p class="empty">No dashboard imports yet.</p>
+      </div>
+      <p class="rail-section-label">Ledger activity</p>
+      <div id="activity-list" class="activity-list" aria-live="polite">
+        <p class="empty">Waiting for ledger activity...</p>
+      </div>
+    </aside>
+  </div>
+
+  <dialog class="import-dialog" id="import-dialog" aria-labelledby="import-title">
+    <form class="import-form" id="import-form">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Financial Agent</p>
+          <h2 id="import-title">Import a financial document</h2>
+        </div>
+        <button class="dialog-close" id="import-close" type="button" aria-label="Close import dialog">×</button>
+      </div>
+      <p class="dialog-copy">Add an investment statement or an LIC, ULIP, endowment, or term policy PDF. Setu will identify the document and validate its values before updating the ledger.</p>
+      <label class="drop-zone" id="drop-zone" for="document-file">
+        <input id="document-file" name="file" type="file" accept="application/pdf,.pdf" required>
+        <span class="drop-icon" aria-hidden="true">⇧</span>
+        <strong>Choose a PDF or drop it here</strong>
+        <span>Maximum 25 MB</span>
+      </label>
+      <div class="selected-file" id="selected-file" hidden></div>
+      <div class="privacy-note">
+        <strong>Local processing boundary</strong>
+        <span>The temporary PDF is deleted after processing. Only validated fields, provenance, and workflow status are retained.</span>
+      </div>
+      <p class="form-error" id="import-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="button secondary" id="import-cancel" type="button">Cancel</button>
+        <button class="button primary" id="import-submit" type="submit">Start import</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="import-dialog ask-dialog" id="ask-dialog" aria-labelledby="ask-title">
+    <form class="import-form" id="ask-form">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Grounded portfolio Q&amp;A</p>
+          <h2 id="ask-title">Ask Setu</h2>
+        </div>
+        <button class="dialog-close" id="ask-close" type="button" aria-label="Close Ask Setu">×</button>
+      </div>
+      <p class="dialog-copy">Ask about ROI, concentration, currency exposure, allocation, short- or long-term risk, the health score, or missing data. Setu uses deterministic ledger tools for every number.</p>
+      <label class="ask-label" for="ask-question">Question</label>
+      <textarea id="ask-question" maxlength="1000" required placeholder="What should I pay attention to in this portfolio?"></textarea>
+      <div class="privacy-note">
+        <strong>Sanitized cloud boundary</strong>
+        <span>Claude receives your question and approved ledger calculations—not uploaded PDFs, raw document text, or file paths. Avoid typing personal identifiers.</span>
+      </div>
+      <p class="form-error" id="ask-error" role="alert" hidden></p>
+      <section class="ask-answer" id="ask-answer" hidden aria-live="polite"></section>
+      <div class="dialog-actions">
+        <button class="button secondary" id="ask-cancel" type="button">Close</button>
+        <button class="button primary" id="ask-submit" type="submit">Ask</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="policy-dialog" id="policy-dialog" aria-labelledby="policy-dialog-title">
+    <div class="policy-detail" id="policy-detail"></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

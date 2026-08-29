@@ -88,6 +88,118 @@ def report():
     _alloc_table("By currency", nw.by_currency, nw, base)
 
 
+@app.command()
+def evaluate(
+    live_model: bool = typer.Option(
+        False,
+        "--live-model/--no-live-model",
+        help="Also verify exact extraction with the configured local Ollama model.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print machine-readable JSON."),
+):
+    """Run the synthetic safety and correctness evaluation without changing the real ledger."""
+    import json
+
+    from setu.evaluation import run_evaluation
+
+    report = run_evaluation(load_config(), live_model=live_model)
+    if json_output:
+        console.print_json(json.dumps(report.as_dict()))
+    else:
+        table = Table(title="Setu safety and correctness evaluation", show_edge=False)
+        table.add_column("Result")
+        table.add_column("Metric")
+        table.add_column("Observed")
+        table.add_column("Target")
+        for metric in report.metrics:
+            table.add_row(
+                "PASS" if metric.passed else "FAIL",
+                metric.name,
+                metric.value,
+                metric.target,
+                style="green" if metric.passed else "red",
+            )
+        console.print(table)
+        console.print(
+            f"[{'green' if report.passed else 'red'}]"
+            f"{'All checks passed' if report.passed else 'Evaluation failed'}[/] "
+            f"in {report.elapsed_seconds:.2f}s."
+        )
+    if not report.passed:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def dashboard(
+    port: int = typer.Option(8765, "--port", min=1024, max=65535, help="Local dashboard port."),
+    open_browser: bool = typer.Option(True, "--open/--no-open", help="Open the dashboard in a browser."),
+):
+    """Open Setu's local multi-agent workspace."""
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from setu.dashboard.server import create_app
+
+    config = load_config()
+    if config.dashboard_password is None:
+        console.print(
+            "[red]Dashboard password is not configured.[/red] "
+            "Add SETU_DASHBOARD_PASSWORD to the project-local .env file."
+        )
+        raise typer.Exit(code=1)
+    dashboard_app = create_app(config)
+    create_all(config)
+    url = f"http://127.0.0.1:{port}"
+    console.print(f"[green]Setu workspace[/green] is available at [bold]{url}[/bold]")
+    console.print("[dim]Runs locally. Press Ctrl+C to stop.[/dim]")
+    if open_browser:
+        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+    uvicorn.run(dashboard_app, host="127.0.0.1", port=port, log_level="warning")
+
+
+@app.command()
+def demo(
+    port: int = typer.Option(8765, "--port", min=1024, max=65535),
+    reset: bool = typer.Option(False, "--reset", help="Rebuild only the isolated demo ledger."),
+    open_browser: bool = typer.Option(True, "--open/--no-open"),
+):
+    """Launch a synthetic final demo without changing the personal ledger."""
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from setu.agents.orchestrator import Orchestrator
+    from setu.dashboard.server import create_app
+    from setu.demo import prepare_demo
+
+    runtime = prepare_demo(load_config(), reset=reset)
+    if runtime.config.dashboard_password is None:
+        console.print(
+            "[red]Dashboard password is not configured.[/red] "
+            "Add SETU_DASHBOARD_PASSWORD to the project-local .env file."
+        )
+        raise typer.Exit(code=1)
+    dashboard_app = create_app(
+        config=runtime.config,
+        session_factory=runtime.sessions,
+        orchestrator_factory=lambda: Orchestrator(
+            runtime.config,
+            checkpoint_path=runtime.checkpoint_path,
+        ),
+    )
+    url = f"http://127.0.0.1:{port}"
+    console.print("[green]Setu final demo is ready.[/green]")
+    console.print(f"Synthetic ledger: [bold]{runtime.config.paths.db_path}[/bold]")
+    console.print("Your personal ledger was not changed.")
+    console.print(f"Open [bold]{url}[/bold] and sign in with your dashboard password.")
+    if open_browser:
+        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+    uvicorn.run(dashboard_app, host="127.0.0.1", port=port, log_level="warning")
+
+
 def _alloc_table(title: str, buckets: dict, nw: calc.NetWorth, base: str):
     alloc = nw.allocation(buckets)
     table = Table(title=title, title_style="bold cyan", show_edge=False)
@@ -124,6 +236,7 @@ def ingest(
     """
     from setu.agents.orchestrator import Orchestrator
     from setu.llm.local import LocalClient
+    from setu.tools.pdf_extract import OcrError
 
     config = load_config()
     p = Path(path)
@@ -142,8 +255,12 @@ def ingest(
 
     thread_id = thread or p.stem
     console.print(f"Ingesting [bold]{p.name}[/bold] (thread [dim]{thread_id}[/dim]) with {client.model}…")
-    with Orchestrator(config) as orch:
-        outcome = orch.ingest(str(p), thread_id)
+    try:
+        with Orchestrator(config) as orch:
+            outcome = orch.ingest(str(p), thread_id)
+    except OcrError as exc:
+        console.print(f"[red]OCR failed:[/red] {exc}")
+        raise typer.Exit(code=1)
 
     if trace:
         _render_trace(outcome.trace)
@@ -156,10 +273,22 @@ def ingest(
     if outcome.state.get("persisted_skipped"):
         console.print("[yellow]Already ingested[/yellow] — skipped (idempotent).")
     else:
-        console.print(
-            f"[green]✓ Ingested[/green] {outcome.persisted_holdings} holding(s); "
-            f"reconciliation: [bold]{outcome.reconcile_status}[/bold]."
-        )
+        if outcome.persisted_policies:
+            console.print(
+                f"[green]✓ Ingested[/green] {outcome.persisted_policies} policy value(s) and "
+                f"{outcome.persisted_obligations} premium obligation(s); "
+                f"validation: [bold]{outcome.reconcile_status}[/bold]."
+            )
+        elif outcome.persisted_balances:
+            console.print(
+                f"[green]✓ Ingested[/green] {outcome.persisted_balances} bank balance(s); "
+                f"reconciliation: [bold]{outcome.reconcile_status}[/bold]."
+            )
+        else:
+            console.print(
+                f"[green]✓ Ingested[/green] {outcome.persisted_holdings} holding(s); "
+                f"reconciliation: [bold]{outcome.reconcile_status}[/bold]."
+            )
 
 
 @app.command()
@@ -178,8 +307,17 @@ def resume(
     if trace:
         _render_trace(outcome.trace)
 
-    if outcome.state.get("persisted_holdings"):
-        console.print(f"[green]✓ Resumed[/green] — wrote {outcome.persisted_holdings} holding(s).")
+    if (
+        outcome.state.get("persisted_holdings")
+        or outcome.state.get("persisted_balances")
+        or outcome.state.get("persisted_policies")
+    ):
+        console.print(
+            f"[green]✓ Resumed[/green] — wrote {outcome.persisted_holdings} holding(s), "
+            f"{outcome.persisted_balances} balance(s), "
+            f"{outcome.persisted_policies} policy value(s), and "
+            f"{outcome.persisted_obligations} obligation(s)."
+        )
     else:
         console.print("[yellow]Resumed — nothing persisted[/yellow] (rejected or already ingested).")
 
@@ -191,8 +329,9 @@ def ask(
 ):
     """Answer a question via the Claude tool-calling loop (concept #1).
 
-    Claude decides which deterministic tool to call (fx_convert / compute_net_worth /
-    pdf_extract), reads the JSON result, and composes the answer. No number is computed by the LLM.
+    Claude decides which deterministic tool to call (FX, net worth, or portfolio analysis), reads
+    the sanitized JSON result, and composes the answer. Raw document text is never exposed to the
+    cloud tool loop, and no number is computed by the LLM.
     """
     from setu.llm.claude import ClaudeClient, ClaudeError
     from setu.tools.registry import TOOL_SCHEMAS, build_executor

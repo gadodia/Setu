@@ -53,7 +53,7 @@ def _table(data: list[list[str]], col_widths=None) -> Table:
 
 
 def _brokerage_story(acct: AccountSpec) -> list:
-    """US brokerage / 401k layout: Symbol | Description | Qty | Market Value."""
+    """US brokerage / 401k layout with source-stated cost basis."""
     story = [
         Paragraph(f"<b>{acct.institution}</b>", _STYLES["Title"]),
         Paragraph(f"{acct.account_name} &nbsp;&nbsp; Account {acct.account_ref}", _STYLES["Normal"]),
@@ -61,13 +61,22 @@ def _brokerage_story(acct: AccountSpec) -> list:
         Spacer(1, 0.25 * inch),
         Paragraph("<b>Holdings</b>", _STYLES["Heading2"]),
     ]
-    rows = [["Symbol", "Description", "Quantity", "Market Value"]]
+    rows = [["Symbol", "Description", "Quantity", "Cost Basis", "Market Value"]]
     total = Decimal("0")
     for h in acct.holdings:
-        rows.append([h.symbol or "-", h.name, f"{h.quantity:,.3f}", _fmt(h.market_value, h.currency)])
+        rows.append([
+            h.symbol or "-",
+            h.name,
+            f"{h.quantity:,.3f}",
+            _fmt(h.cost_basis, h.currency),
+            _fmt(h.market_value, h.currency),
+        ])
         total += h.market_value
-    rows.append(["", "", "Total", _fmt(total, acct.currency)])
-    story.append(_table(rows, col_widths=[0.9 * inch, 2.8 * inch, 1.1 * inch, 1.4 * inch]))
+    rows.append(["", "", "", "Total", _fmt(total, acct.currency)])
+    story.append(_table(
+        rows,
+        col_widths=[0.7 * inch, 2.05 * inch, 0.8 * inch, 1.3 * inch, 1.35 * inch],
+    ))
     story.append(Spacer(1, 0.2 * inch))
     story.append(Paragraph(
         f"Total account value: <b>{_fmt(total, acct.currency)}</b> as of {AS_OF.isoformat()}.",
@@ -76,7 +85,7 @@ def _brokerage_story(acct: AccountSpec) -> list:
 
 
 def _cas_story(acct: AccountSpec) -> list:
-    """Indian mutual-fund CAS layout: Scheme Name | Units | NAV | Value (Rs.)."""
+    """Indian mutual-fund CAS layout with source-stated invested amount."""
     story = [
         Paragraph("<b>Consolidated Account Statement (CAS)</b>", _STYLES["Title"]),
         Paragraph(f"{acct.institution} &nbsp;&nbsp; Folio {acct.account_ref}", _STYLES["Normal"]),
@@ -84,14 +93,23 @@ def _cas_story(acct: AccountSpec) -> list:
         Spacer(1, 0.25 * inch),
         Paragraph("<b>Mutual Fund Holdings</b>", _STYLES["Heading2"]),
     ]
-    rows = [["Scheme Name", "Units", "NAV (Rs.)", "Value (Rs.)"]]
+    rows = [["Scheme Name", "Units", "Invested Amount", "NAV", "Current Value"]]
     total = Decimal("0")
     for h in acct.holdings:
         nav = (h.market_value / h.quantity) if h.quantity else Decimal("0")
-        rows.append([h.name, f"{h.quantity:,.3f}", f"{nav:,.4f}", f"{h.market_value:,.2f}"])
+        rows.append([
+            h.name,
+            f"{h.quantity:,.3f}",
+            f"{h.cost_basis:,.2f}",
+            f"{nav:,.4f}",
+            f"{h.market_value:,.2f}",
+        ])
         total += h.market_value
-    rows.append(["", "", "Total", f"{total:,.2f}"])
-    story.append(_table(rows, col_widths=[2.9 * inch, 1.1 * inch, 1.1 * inch, 1.3 * inch]))
+    rows.append(["", "", "", "Total", f"{total:,.2f}"])
+    story.append(_table(
+        rows,
+        col_widths=[2.2 * inch, 0.8 * inch, 1.25 * inch, 0.8 * inch, 1.15 * inch],
+    ))
     story.append(Spacer(1, 0.2 * inch))
     story.append(Paragraph(
         f"Portfolio valuation: <b>Rs. {total:,.2f}</b> as on {AS_OF.strftime('%d-%b-%Y')}.",
@@ -123,16 +141,25 @@ def _insurance_story(acct: AccountSpec) -> list:
         Paragraph(f"As on {AS_OF.strftime('%d-%b-%Y')}", _STYLES["Normal"]),
         Spacer(1, 0.25 * inch),
     ]
-    rows = [["Policy", "Type", "Sum Assured", "Fund/Surrender Value"]]
+    rows = [["Policy", "Type", "Sum Assured", "Current Value", "Annual Premium", "Next Due"]]
     for p in acct.policies:
         sa = f"{p.sum_assured:,.2f}" if p.sum_assured else "-"
-        val = f"{p.asset_value:,.2f}" if p.asset_value > 0 else "N/A (protection only)"
-        rows.append([p.name, p.policy_type.value, sa, val])
-    story.append(_table(rows, col_widths=[2.3 * inch, 0.9 * inch, 1.3 * inch, 1.6 * inch]))
+        if p.policy_type.value == "TERM":
+            val = "N/A (protection)"
+        elif p.asset_value is None:
+            val = "Not stated"
+        else:
+            val = f"{p.asset_value:,.2f}"
+        premium = f"{p.premium_amount:,.2f}" if p.premium_amount else "-"
+        due = p.premium_due_date.strftime("%d-%b-%Y") if p.premium_due_date else "-"
+        rows.append([p.name, p.policy_type.value, sa, val, premium, due])
+    story.append(_table(rows, col_widths=[1.75 * inch, 0.65 * inch, 1.05 * inch,
+                                         1.15 * inch, 1.05 * inch, 1.0 * inch]))
     story.append(Spacer(1, 0.2 * inch))
     story.append(Paragraph(
         "ULIP fund value is market-linked (units x NAV). Term plans provide protection only "
-        "and carry no surrender/asset value.", _STYLES["Normal"]))
+        "and carry no surrender/asset value. A missing endowment surrender value is unknown, "
+        "not zero, until a current value statement is supplied.", _STYLES["Normal"]))
     return story
 
 

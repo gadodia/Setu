@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sign in to the private Setu financial workspace">
+  <title>Sign in - Setu</title>
+  <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-context" aria-labelledby="setu-title">
+      <a class="brand" href="/login" aria-label="Setu sign in">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span><strong id="setu-title">Setu</strong><small>Personal agent workspace</small></span>
+      </a>
+      <div class="context-copy">
+        <p class="eyebrow">Local financial workspace</p>
+        <h1>Your portfolio stays behind your password.</h1>
+        <p>Setu runs on this computer and requires a fresh login whenever the local server restarts.</p>
+      </div>
+      <ul class="privacy-list" aria-label="Privacy safeguards">
+        <li><span aria-hidden="true">01</span> Localhost access only</li>
+        <li><span aria-hidden="true">02</span> Eight-hour private session</li>
+        <li><span aria-hidden="true">03</span> Password checked only by local Setu</li>
+      </ul>
+    </section>
+
+    <section class="login-panel" aria-labelledby="login-title">
+      <form class="login-card" id="login-form">
+        <p class="eyebrow">Private access</p>
+        <h2 id="login-title">Sign in to Setu</h2>
+        <p class="form-copy">Enter the dashboard password configured in your project-local <code>.env</code> file.</p>
+
+        <label for="password">Password</label>
+        <div class="password-field">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            minlength="12"
+            maxlength="1024"
+            autocomplete="current-password"
+            required
+            autofocus
+          >
+          <button id="password-toggle" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+        </div>
+        <p class="form-error" id="login-error" role="alert" aria-live="polite" hidden></p>
+        <button class="submit-button" id="login-submit" type="submit">Open workspace</button>
+        <p class="local-note"><span aria-hidden="true"></span> Connection restricted to this computer</p>
+      </form>
+    </section>
+  </main>
+  <script src="/login.js" defer></script>
+</body>
+</html>
