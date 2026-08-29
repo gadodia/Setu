@@ -10,6 +10,7 @@ from __future__ import annotations
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from dotenv import dotenv_values
@@ -50,6 +51,24 @@ class Ollama(BaseModel):
     host: str = "http://localhost:11434"
 
 
+class Ocr(BaseModel):
+    """Local scanned-page OCR settings."""
+
+    enabled: bool = True
+    mode: Literal["auto", "always", "never"] = "auto"
+    min_text_chars: int = Field(default=20, ge=0)
+    dpi: int = Field(default=200, ge=72, le=600)
+    pipeline_version: str = "v1"
+
+
+class ClaudeSettings(BaseModel):
+    """Cost and response-size limits for the personal Claude tool loop."""
+
+    max_output_tokens: int = Field(default=1200, ge=256, le=8192)
+    max_tool_rounds: int = Field(default=4, ge=1, le=12)
+    target_answer_words: int = Field(default=450, ge=100, le=1000)
+
+
 class Config(BaseModel):
     base_currency: str = "USD"
     paths: Paths
@@ -57,9 +76,12 @@ class Config(BaseModel):
     fx_rates: dict[str, Decimal] = Field(default_factory=dict)
     model_router: ModelRouter = Field(default_factory=ModelRouter)
     ollama: Ollama = Field(default_factory=Ollama)
+    ocr: Ocr = Field(default_factory=Ocr)
+    claude: ClaudeSettings = Field(default_factory=ClaudeSettings)
 
     # Secrets loaded from .env (never from config.yaml).
     anthropic_api_key: SecretStr | None = None
+    dashboard_password: SecretStr | None = None
 
     @property
     def db_url(self) -> str:
@@ -104,5 +126,7 @@ def load_config(config_path: str | Path = DEFAULT_CONFIG_PATH) -> Config:
     config = Config(**raw)
     key = project_env.get("ANTHROPIC_API_KEY")
     config.anthropic_api_key = SecretStr(key) if key else None
+    dashboard_password = project_env.get("SETU_DASHBOARD_PASSWORD")
+    config.dashboard_password = SecretStr(dashboard_password) if dashboard_password else None
     config.resolve_paths()
     return config

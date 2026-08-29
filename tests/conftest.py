@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -22,6 +23,7 @@ def config(tmp_path) -> Config:
     cfg.paths.synthetic_dir = tmp_path / "synthetic"
     cfg.paths.inbox_dir = tmp_path / "inbox"
     cfg.paths.db_path = tmp_path / "test.db"
+    cfg.dashboard_password = SecretStr("setu-test-password")
     cfg.resolve_paths()
     return cfg
 

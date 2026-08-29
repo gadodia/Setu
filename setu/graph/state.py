@@ -34,7 +34,43 @@ class ExtractedHoldingDict(TypedDict, total=False):
     geography: str            # Geography.value
     quantity: str             # decimal string
     market_value: str         # decimal string
+    cost_basis: str | None    # source-stated total acquisition cost; null when absent
     currency: str
+
+
+class ExtractedPolicyDict(TypedDict, total=False):
+    policy_name: str
+    policy_type: str
+    policy_number: str | None
+    plan_number: str | None
+    status: str | None
+    sum_assured: str | None
+    surrender_value: str | None
+    fund_value: str | None
+    maturity_value: str | None
+    premium_amount: str | None
+    premium_due_date: str | None
+    commencement_date: str | None
+    maturity_date: str | None
+    policy_term_years: int | None
+    premium_payment_term_years: int | None
+    premium_mode: str | None
+    vested_bonus: str | None
+    guaranteed_additions: str | None
+    maturity_benefit_4pct: str | None
+    maturity_benefit_8pct: str | None
+    units: str | None
+    nav: str | None
+    currency: str
+    asset_value: str | None
+    valuation_basis: str
+
+
+class ExtractedBalanceDict(TypedDict, total=False):
+    amount: str
+    currency: str
+    source_label: str
+    verification_amount: str | None
 
 
 class TraceEvent(TypedDict, total=False):
@@ -50,13 +86,20 @@ class SetuState(TypedDict, total=False):
     # --- inputs (set at invoke) ---
     goal: str
     statement_path: str
+    source_name: str
 
     # --- written by `ingest` ---
     institution: str
     account_ref: str | None
     period_end: str                       # ISO date parsed from the statement
     currency: str
+    document_kind: Literal["HOLDINGS", "POLICY", "BANK"]
+    policy_document_type: Literal[
+        "POLICY_STATEMENT", "PREMIUM_NOTICE", "PREMIUM_RECEIPT", "UNKNOWN"
+    ]
     extracted: list[ExtractedHoldingDict]
+    extracted_policies: list[ExtractedPolicyDict]
+    extracted_balance: ExtractedBalanceDict | None
     file_hash: str
     already_ingested: bool
     raw_text: str                         # statement text reconcile checks the stated total against;
@@ -68,6 +111,8 @@ class SetuState(TypedDict, total=False):
     sum_extracted: str                    # decimal string
     reconcile_status: ReconcileStatus
     reconcile_delta: str                  # |stated - summed| as a decimal string (0 if no stated total)
+    policy_review_reason: str | None
+    policy_warnings: list[str]
 
     # --- human-in-the-loop ---
     pending_question: str | None          # populated right before the ask_user interrupt
@@ -75,6 +120,9 @@ class SetuState(TypedDict, total=False):
 
     # --- written by `persist` ---
     persisted_holdings: int
+    persisted_balances: int
+    persisted_policies: int
+    persisted_obligations: int
     persisted_skipped: bool               # true when the statement was already in the ledger
 
     # --- control ---
@@ -83,12 +131,15 @@ class SetuState(TypedDict, total=False):
     error: str | None
 
 
-def new_state(goal: str, statement_path: str) -> SetuState:
+def new_state(goal: str, statement_path: str, source_name: str | None = None) -> SetuState:
     """Build a fresh State for a run (keeps invoke sites from forgetting required fields)."""
     return SetuState(
         goal=goal,
         statement_path=statement_path,
+        source_name=source_name or statement_path.rsplit("/", 1)[-1],
         extracted=[],
+        extracted_policies=[],
+        extracted_balance=None,
         retries=0,
         trace=[],
     )

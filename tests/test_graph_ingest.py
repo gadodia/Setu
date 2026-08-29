@@ -76,13 +76,13 @@ def _orchestrator(config, ledger_factory, holdings, statement_path, file_hash="h
 
 BROKERAGE_HOLDINGS = [
     _holding("VOO", "Vanguard S&P 500 ETF", AssetClass.EQUITY, Geography.US, 120, 60000, "USD"),
-    _holding("AAPL", "Apple Inc.", AssetClass.EQUITY, Geography.US, 200, 44000, "USD"),
-    _holding("BND", "Vanguard Total Bond ETF", AssetClass.DEBT, Geography.US, 150, 11000, "USD"),
+    _holding("AAPL", "Apple Inc.", AssetClass.EQUITY, Geography.US, 320, 80000, "USD"),
+    _holding("BND", "Vanguard Total Bond ETF", AssetClass.DEBT, Geography.US, 150, 10000, "USD"),
 ]
 
 
 def test_happy_path_reconciles_and_persists(config, ledger_factory, statements):
-    """Sum (115000) matches the statement's stated total → ok → persisted, no interrupt."""
+    """Sum (150000) matches the statement's stated total → ok → persisted, no interrupt."""
     orch, compiled = _orchestrator(config, ledger_factory, BROKERAGE_HOLDINGS,
                                    statements["fidelity_brokerage"])
     try:
@@ -100,7 +100,7 @@ def test_happy_path_reconciles_and_persists(config, ledger_factory, statements):
 
 
 def test_mismatch_interrupts_then_resume_accept_persists(config, ledger_factory, statements):
-    """Under-extraction (only 100000 vs stated 115000) → mismatch → interrupt; accept → persist."""
+    """Under-extraction (only 100000 vs stated 150000) → mismatch → interrupt; accept → persist."""
     short = [_holding("VOO", "Vanguard S&P 500 ETF", AssetClass.EQUITY, Geography.US, 120, 100000, "USD")]
     orch, compiled = _orchestrator(config, ledger_factory, short, statements["fidelity_brokerage"])
     try:

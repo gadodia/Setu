@@ -29,6 +29,9 @@ class RunOutcome:
     trace: list[TraceEvent] = field(default_factory=list)
     question: str | None = None       # populated when status == "interrupted"
     persisted_holdings: int = 0
+    persisted_balances: int = 0
+    persisted_policies: int = 0
+    persisted_obligations: int = 0
     reconcile_status: str | None = None
 
 
@@ -55,10 +58,10 @@ class Orchestrator:
         self.close()
 
     # --- goals ---------------------------------------------------------------------------
-    def ingest(self, path: str, thread_id: str) -> RunOutcome:
+    def ingest(self, path: str, thread_id: str, source_name: str | None = None) -> RunOutcome:
         """Run the ingestion graph for one statement under a thread_id (its checkpoint key)."""
         cfg = {"configurable": {"thread_id": thread_id}}
-        result = self.compiled.graph.invoke(new_state("ingest", path), cfg)
+        result = self.compiled.graph.invoke(new_state("ingest", path, source_name=source_name), cfg)
         return self._outcome(result, cfg)
 
     def resume(self, thread_id: str, decision: str) -> RunOutcome:
@@ -86,6 +89,9 @@ class Orchestrator:
             state=self._clean(result),
             trace=trace,
             persisted_holdings=result.get("persisted_holdings", 0),
+            persisted_balances=result.get("persisted_balances", 0),
+            persisted_policies=result.get("persisted_policies", 0),
+            persisted_obligations=result.get("persisted_obligations", 0),
             reconcile_status=result.get("reconcile_status"),
         )
 

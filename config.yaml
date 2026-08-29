@@ -33,6 +33,22 @@ model_router:
     provider: claude
     model: claude-sonnet-5
 
+# Ask Setu response controls. The prompt targets a shorter answer; max_output_tokens is the hard
+# ceiling for each Claude turn, while max_tool_rounds bounds cost and prevents runaway loops.
+claude:
+  max_output_tokens: 1200
+  max_tool_rounds: 4
+  target_answer_words: 450
+
 # Local model (Ollama) connection.
 ollama:
   host: http://localhost:11434
+
+# Local OCR fallback for scanned/image-only PDF pages. PaddleOCR-VL is loaded only when a page has
+# fewer than min_text_chars embedded characters. Install with: uv sync --extra ocr
+ocr:
+  enabled: true
+  mode: auto
+  min_text_chars: 20
+  dpi: 200
+  pipeline_version: v1

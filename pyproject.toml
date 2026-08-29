@@ -22,6 +22,16 @@ dependencies = [
     "ollama>=0.6.2",
     "langgraph>=0.2",
     "langgraph-checkpoint-sqlite>=2.0",
+    "fastapi>=0.116",
+    "uvicorn>=0.35",
+    "python-multipart>=0.0.20",
+    "markdown-it-py>=4.0",
+]
+
+[project.optional-dependencies]
+ocr = [
+    "paddlepaddle>=3.2.1",
+    "paddleocr[doc-parser]>=3.4.0",
 ]
 
 [project.scripts]
