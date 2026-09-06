@@ -166,6 +166,8 @@ the authoritative description of the final runtime.
   visually verified final report for submission.
 - [`docs/final/FINAL_PRESENTATION.md`](docs/final/FINAL_PRESENTATION.md) — ten-slide narrative,
   visible copy, demo sequence, timing, and speaker notes.
+- [`docs/final/Setu_Final_Capstone_Presentation.pptx`](docs/final/Setu_Final_Capstone_Presentation.pptx)
+  — editable, visually verified ten-slide deck used for the recorded presentation.
 - [`docs/final/SUBMISSION_CHECKLIST.md`](docs/final/SUBMISSION_CHECKLIST.md) — final artifact,
   repository-release, recording, and Canvas checks.
 - [`StudyGuide/`](StudyGuide/README.md) — learn-as-you-build curriculum.

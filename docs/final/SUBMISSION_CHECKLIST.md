@@ -25,9 +25,9 @@
 
 - [x] Export the final report to the Canvas-accepted PDF format.
 - [x] Render and visually inspect all three report pages.
-- [ ] Build the 10-slide presentation deck.
-- [ ] Capture a real screenshot from the isolated synthetic dashboard only.
-- [ ] Render and visually inspect every slide; fix overflow and overlap.
+- [x] Build the 10-slide presentation deck with editable diagrams and speaker notes.
+- [x] Capture a real screenshot from the isolated synthetic dashboard only.
+- [x] Render and visually inspect every slide; fix overflow, overlap, and arrow direction.
 - [ ] Rehearse once with the live-demo fallback described in `FINAL_DEMO.md`.
 
 ## Repository release
@@ -51,4 +51,4 @@
 
 - Final report: `Setu_Final_Capstone_Report.pdf` or `Setu_Final_Capstone_Report.docx`
 - Video link and summary: `Setu_Presentation_Video_Link.pdf` or `.docx`
-- Presentation deck for recording/reference: `Setu_Final_Presentation.pptx`
+- Presentation deck for recording/reference: `Setu_Final_Capstone_Presentation.pptx`
