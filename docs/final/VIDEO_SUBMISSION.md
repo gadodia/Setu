@@ -2,7 +2,7 @@
 
 ## Required 8-10 minute presentation
 
-**Video link:** `[ADD ACCESSIBLE YOUTUBE, VIMEO, OR LOOM LINK]`
+**Video link:** https://youtu.be/uGffCT1pezU
 
 Setu is a local-first cross-border wealth agent that turns supported US and Indian financial
 documents into a source-backed portfolio view. The presentation explains how LangGraph coordinates
@@ -17,8 +17,4 @@ evaluation results, safety boundaries, limitations, and next steps.
 - Confirm the video plays in a signed-out or private browser window.
 - Confirm the audio is clear and the dashboard and slides remain readable.
 - Confirm the final duration is between 8 and 10 minutes.
-- Replace the placeholder link above before exporting this page for Canvas.
-
-## Optional 90-second elevator pitch
-
-**Video link:** `[OPTIONAL - REMOVE THIS SECTION IF NOT SUBMITTED]`
+- Open the link in a signed-out or private browser before submitting it to Canvas.

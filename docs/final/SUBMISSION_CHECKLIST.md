@@ -39,10 +39,10 @@
 
 ## Recording and Canvas submission
 
-- [ ] Record the required 8-10 minute presentation.
-- [ ] Upload it to YouTube, Vimeo, or Loom with reviewer-accessible sharing.
+- [x] Record the required 8-10 minute presentation.
+- [x] Upload it to YouTube, Vimeo, or Loom with reviewer-accessible sharing.
 - [ ] Verify video playback, audio, slide readability, and sharing while signed out.
-- [ ] Add the video URL to `VIDEO_SUBMISSION.md` and export the link document.
+- [x] Add the video URL to `VIDEO_SUBMISSION.md` and export the link document.
 - [ ] Upload the final report and video-link document to Canvas.
 - [ ] Confirm Canvas shows both uploaded files before the deadline.
 - [ ] Optional: record and link the 90-second elevator pitch.
