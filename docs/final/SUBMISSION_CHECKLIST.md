@@ -32,10 +32,10 @@
 
 ## Repository release
 
-- [ ] Run the final secret, identity, generated-file, and Git-status audit.
-- [ ] Push the final report and presentation artifact commits.
-- [ ] Change `gadodia/Setu` from private to public.
-- [ ] Verify the repository in a signed-out browser and run the README quick-start from a clean clone.
+- [x] Run the final secret, identity, generated-file, and Git-status audit.
+- [x] Push the final report and presentation artifact commits.
+- [x] Change `gadodia/Setu` from private to public.
+- [x] Verify the repository without authentication and run the README quick-start from a clean clone.
 
 ## Recording and Canvas submission
 
