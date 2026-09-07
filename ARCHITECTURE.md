@@ -9,8 +9,8 @@ The governing principle is:
 
 > Models interpret; deterministic code verifies and calculates; humans resolve uncertainty.
 
-This document describes the implemented capstone system. Earlier checkpoint documents remain in
-the repository as design history and may describe ideas that were later simplified or deferred.
+This document describes the implemented capstone system and separates current behavior from future
+extensions.
 
 ## Scope
 
@@ -140,7 +140,7 @@ in-progress workflow state.
 
 ### Retrieval decision
 
-Checkpoint 3 proposed a semantic vector store for policy rules, past runs, and user corrections.
+An early design considered a semantic vector store for policy rules, past runs, and user corrections.
 The final MVP does not implement that RAG layer. The safety-critical policy rule set is small, so
 TERM/endowment/ULIP semantics were moved into deterministic, versioned Python logic instead of
 similarity search. Exact portfolio questions use SQL, where semantic retrieval would be less

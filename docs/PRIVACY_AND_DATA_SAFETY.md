@@ -7,10 +7,10 @@ boundaries.
 
 ## Public repository boundary
 
-The repository contains only source code, public documentation, UI mockups, and
-synthetic test/demo data. It must not contain real statements, policy documents,
-account numbers, names, addresses, credentials, local databases, or model
-checkpoints.
+The repository contains only source code, public technical documentation, synthetic generators and
+evaluation evidence, a synthetic dashboard screenshot, and final capstone materials. It must not
+contain real statements, policy documents, account numbers, names, addresses, credentials, local
+databases, or model checkpoints.
 
 The following runtime artifacts are intentionally ignored by Git:
 

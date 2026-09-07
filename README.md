@@ -41,8 +41,8 @@ Claude Q&A receives only sanitized ledger calculations—never raw PDFs, extract
 file paths.
 
 The final MVP does **not** implement stock research, form filling, semantic RAG, a CrewAI team, or
-autonomous trading. Those are future extensions. The architecture document distinguishes early
-checkpoint plans from the components that run today.
+autonomous trading. Those are future extensions. [`ARCHITECTURE.md`](ARCHITECTURE.md) is the
+authoritative description of what runs today.
 
 ## Reviewer quickstart
 
@@ -68,6 +68,8 @@ Open `http://127.0.0.1:8765`. The expected synthetic view has net worth **$275,4
 cost-backed investments, three policies, three premium obligations, and an explainable health score
 of **37/100**. See [`SYNTHETIC_DEMO_SCENARIO.md`](SYNTHETIC_DEMO_SCENARIO.md) for every planted risk
 and expected figure.
+
+![Setu dashboard populated with synthetic cross-border portfolio data](docs/images/setu-dashboard.png)
 
 ## Optional live features
 
@@ -140,19 +142,9 @@ readable Markdown layout with a direct answer, grounded evidence, watch-outs, an
 relevant. `config.yaml` bounds each Claude turn to 1,200 output tokens and the tool loop to four
 rounds; the UI explicitly warns if an answer reaches that limit instead of silently cutting it off.
 
-## Docs
-
-`SUBMISSION_checkpoint1.md` through `SUBMISSION_checkpoint6.md` are historical design snapshots.
-They intentionally preserve ideas considered at each stage; [`ARCHITECTURE.md`](ARCHITECTURE.md) is
-the authoritative description of the final runtime.
+## Documentation and presentation
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — implemented design, decisions, code map, and limitations.
-- [`DESIGN_EVOLUTION.md`](DESIGN_EVOLUTION.md) — how the initial checkpoint plans became the final
-  bounded architecture.
-- [`DESIGN_personas_memory.md`](DESIGN_personas_memory.md) — early persona and memory design artifact.
-- [`DESIGN_prior_art.md`](DESIGN_prior_art.md) — early competitive landscape and reuse decisions.
-- [`SETU_ARCHITECTURE_INTERVIEW_GUIDE.md`](SETU_ARCHITECTURE_INTERVIEW_GUIDE.md) — architecture,
-  agent communication, framework comparisons, and interview answers.
 - [`FINAL_DEMO.md`](FINAL_DEMO.md) — preflight checks, demo sequence, expected figures, and recovery.
 - [`SYNTHETIC_DEMO_SCENARIO.md`](SYNTHETIC_DEMO_SCENARIO.md) — demo holdings, cost basis, planted
   risks, health-score math, suggestions, and intentional data gaps.
@@ -164,13 +156,10 @@ the authoritative description of the final runtime.
   draft following the official capstone outline.
 - [`docs/final/Setu_Final_Capstone_Report.pdf`](docs/final/Setu_Final_Capstone_Report.pdf) — rendered,
   visually verified final report for submission.
-- [`docs/final/FINAL_PRESENTATION.md`](docs/final/FINAL_PRESENTATION.md) — ten-slide narrative,
-  visible copy, demo sequence, timing, and speaker notes.
 - [`docs/final/Setu_Final_Capstone_Presentation.pptx`](docs/final/Setu_Final_Capstone_Presentation.pptx)
   — editable, visually verified ten-slide deck used for the recorded presentation.
-- [`docs/final/SUBMISSION_CHECKLIST.md`](docs/final/SUBMISSION_CHECKLIST.md) — final artifact,
-  repository-release, recording, and Canvas checks.
-- [`StudyGuide/`](StudyGuide/README.md) — learn-as-you-build curriculum.
+- [Recorded capstone presentation](https://youtu.be/uGffCT1pezU) — architecture, evaluation, and a
+  working synthetic-data demonstration.
 
 Base currency: **USD**. Package manager: **uv**.
 
